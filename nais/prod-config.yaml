@@ -1,0 +1,6 @@
+cluster: prod-gcp
+tenant: nav.no
+replicas: 2
+allow_all_users: false
+db_tier: db-custom-1-3840
+db_ha: true

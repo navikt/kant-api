@@ -1,0 +1,14 @@
+name: Rebuild base image
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  rebuild:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/build-deploy-main.yaml

@@ -1,0 +1,75 @@
+apiVersion: nais.io/v1alpha1
+kind: Application
+metadata:
+  name: kant-api
+  namespace: klage
+  labels:
+    team: klage
+spec:
+  image: {{ image }}
+  port: 8080
+  startup:
+    path: /internal/health/readiness
+    initialDelay: 5
+    periodSeconds: 5
+    timeout: 3
+    failureThreshold: 30
+  liveness:
+    path: /internal/health/liveness
+    periodSeconds: 5
+    timeout: 3
+    failureThreshold: 3
+  readiness:
+    path: /internal/health/readiness
+    periodSeconds: 5
+    timeout: 3
+    failureThreshold: 3
+  prometheus:
+    enabled: true
+    path: /internal/prometheus
+  replicas:
+    min: {{ replicas }}
+    max: {{ replicas }}
+  resources:
+    requests:
+      cpu: 50m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+  azure:
+    application:
+      enabled: true
+      tenant: {{ tenant }}
+      allowAllUsers: {{ allow_all_users }}
+      claims:
+        extra:
+          - NAVident
+  accessPolicy:
+    inbound:
+      rules:
+        - application: kant-frontend
+          namespace: klage
+          cluster: {{ cluster }}
+        - application: kabal-api
+          namespace: klage
+          cluster: {{ cluster }}
+  gcp:
+    sqlInstances:
+      - name: kant-api-priv
+        type: POSTGRES_18
+        tier: {{ db_tier }}
+        diskType: SSD
+        diskSize: 10
+        diskAutoresize: true
+        highAvailability: {{ db_ha }}
+        cascadingDelete: false
+        autoBackupHour: 2
+        maintenance:
+          day: 1
+          hour: 4
+        databases:
+          - name: kant-api
+            envVarPrefix: DB
+  env:
+    - name: JAVA_TOOL_OPTIONS
+      value: "-XX:MaxRAMPercentage=70.0"

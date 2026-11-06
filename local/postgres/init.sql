@@ -1,0 +1,14 @@
+\getenv kant_password DB_PASSWORD
+
+CREATE ROLE kant WITH
+    LOGIN
+    PASSWORD :'kant_password'
+    NOSUPERUSER
+    NOCREATEDB
+    NOCREATEROLE
+    NOREPLICATION;
+
+ALTER DATABASE "kant-api" OWNER TO kant;
+GRANT CONNECT, TEMPORARY ON DATABASE "kant-api" TO kant;
+ALTER SCHEMA public OWNER TO kant;
+GRANT ALL ON SCHEMA public TO kant;

@@ -1,0 +1,27 @@
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      kotlin:
+        patterns: ['org.jetbrains.kotlin*']
+      spring:
+        patterns: ['org.springframework*', 'io.spring*']
+      test:
+        patterns: ['org.testcontainers*', 'io.kotest*', '*auth-test*']
+    ignore:
+      - dependency-name: org.testcontainers*
+        update-types: ['version-update:semver-major']
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']

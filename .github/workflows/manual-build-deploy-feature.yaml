@@ -1,0 +1,12 @@
+name: Deploy selected branch to dev
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy-dev:
+    uses: ./.github/workflows/build-deploy-main.yaml

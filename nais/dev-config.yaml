@@ -1,0 +1,6 @@
+cluster: dev-gcp
+tenant: trygdeetaten.no
+replicas: 1
+allow_all_users: true
+db_tier: db-f1-micro
+db_ha: false
