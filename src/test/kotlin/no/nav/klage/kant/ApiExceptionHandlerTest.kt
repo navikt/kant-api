@@ -4,7 +4,7 @@ import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import io.kotest.matchers.shouldBe
-import no.nav.klage.kant.api.ApiExceptionHandler
+import no.nav.klage.kant.config.ApiExceptionHandler
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException

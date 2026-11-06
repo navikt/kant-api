@@ -6,7 +6,7 @@ import ch.qos.logback.core.read.ListAppender
 import com.nimbusds.oauth2.sdk.TokenRequest
 import io.kotest.matchers.shouldBe
 import no.nav.klage.auth.test.MockAzure
-import no.nav.klage.kant.saksdata.SaksdataRepository
+import no.nav.klage.kant.repositories.SaksdataRepository
 import no.nav.klage.kodeverk.Type
 import no.nav.security.mock.oauth2.token.DefaultOAuth2TokenCallback
 import no.nav.security.mock.oauth2.token.KeyProvider

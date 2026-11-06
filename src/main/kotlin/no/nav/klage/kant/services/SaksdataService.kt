@@ -1,5 +1,12 @@
-package no.nav.klage.kant.saksdata
+package no.nav.klage.kant.services
 
+import no.nav.klage.kant.repositories.SaksdataRepository
+import no.nav.klage.kant.saksdata.PageMetadata
+import no.nav.klage.kant.saksdata.Saksdata
+import no.nav.klage.kant.saksdata.SaksdataPage
+import no.nav.klage.kant.saksdata.SaksdataRequest
+import no.nav.klage.kant.saksdata.SaksdataResponse
+import no.nav.klage.kant.saksdata.toResponse
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service

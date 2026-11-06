@@ -1,7 +1,7 @@
-package no.nav.klage.kant.api
+package no.nav.klage.kant.config
 
 import jakarta.validation.ConstraintViolationException
-import no.nav.klage.kant.saksdata.SaksdataNotFoundException
+import no.nav.klage.kant.services.SaksdataNotFoundException
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataAccessException
 import org.springframework.http.HttpHeaders

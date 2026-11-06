@@ -1,8 +1,12 @@
-package no.nav.klage.kant.saksdata
+package no.nav.klage.kant.api
 
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
+import no.nav.klage.kant.saksdata.SaksdataPage
+import no.nav.klage.kant.saksdata.SaksdataRequest
+import no.nav.klage.kant.saksdata.SaksdataResponse
+import no.nav.klage.kant.services.SaksdataService
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.DeleteMapping

@@ -1,5 +1,6 @@
-package no.nav.klage.kant.saksdata
+package no.nav.klage.kant.repositories
 
+import no.nav.klage.kant.saksdata.Saksdata
 import org.springframework.data.jpa.repository.JpaRepository
 import java.util.UUID
 
