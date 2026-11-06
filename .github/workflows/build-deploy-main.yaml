@@ -1,103 +1,21 @@
-name: Build and deploy
-
-on:
-  push:
-    branches: [main]
-  workflow_call:
-
-permissions:
-  contents: read
-
-concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: false
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          persist-credentials: false
-      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
-        with:
-          distribution: temurin
-          java-version: '21'
-      - uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
-      - run: ./gradlew ktlintCheck detekt build --no-daemon
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: application
-          path: build/libs/kant-api.jar
-          if-no-files-found: error
-          retention-days: 1
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: failure()
-        with:
-          name: test-reports
-          path: |
-            build/reports/tests/
-            build/test-results/
-          retention-days: 7
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-      id-token: write
-    outputs:
-      image: ${{ steps.image.outputs.image }}
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          persist-credentials: false
-      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
-        with:
-          name: application
-          path: build/libs
-      - uses: nais/docker-build-push@d3a1f7e259ecc381a50435e1d4add9059429ebd7 # v0
-        id: image
-        with:
-          team: klage
-          tag: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-  deploy-dev:
-    needs: publish
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          persist-credentials: false
-      - uses: nais/deploy/actions/deploy@7b60caaded00332e9aa117a8342daa0876851dfe # v2
-        env:
-          CLUSTER: dev-gcp
-          RESOURCE: nais/nais.yaml
-          VARS: nais/dev-config.yaml
-          VAR: image=${{ needs.publish.outputs.image }}
-          PRINT_PAYLOAD: 'false'
-  deploy-prod:
-    if: false
-    needs: [publish, deploy-dev]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          persist-credentials: false
-      - uses: nais/deploy/actions/deploy@7b60caaded00332e9aa117a8342daa0876851dfe # v2
-        env:
-          CLUSTER: prod-gcp
-          RESOURCE: nais/nais.yaml
-          VARS: nais/prod-config.yaml
-          VAR: image=${{ needs.publish.outputs.image }}
-          PRINT_PAYLOAD: 'false'
+#name: Build, deploy dev, deploy prod
+#
+#on:
+#  push:
+#    branches:
+#      - main
+#    paths-ignore:
+#      - 'kafka-aiven/**'
+#      - '.github/dependabot.yaml'
+#
+#jobs:
+#  build:
+#    permissions:
+#      contents: write
+#      packages: write
+#      pull-requests: write
+#      id-token: write
+#    uses: navikt/klage-workflows/.github/workflows/build-deploy-main.yaml@main
+#    with:
+#      e2e-tests: 'kabal'
+#    secrets: inherit
