@@ -1,3 +1,6 @@
+ingresses:
+  - https://kant-api.intern.nav.no
+
 cluster: prod-gcp
 tenant: nav.no
 replicas: 2
