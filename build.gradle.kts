@@ -1,4 +1,3 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 
@@ -18,12 +17,8 @@ version = "0.0.1-SNAPSHOT"
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
     }
-}
-
-kotlin {
-    jvmToolchain(21)
 }
 
 allOpen {
@@ -91,9 +86,12 @@ configurations.matching { it.name == "detekt" }.configureEach {
 
 tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_21)
         freeCompilerArgs.add("-Xjsr305=strict")
     }
+}
+
+tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
+    jvmTarget.set("25")
 }
 
 tasks.withType<Test>().configureEach {
