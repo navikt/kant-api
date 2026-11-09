@@ -44,6 +44,10 @@ class SaksdataService(
                 Saksdata(
                     kabalReference = request.kabalReference,
                     sakstype = request.sakstype,
+                    ytelse = request.ytelse,
+                    utfall = request.utfall,
+                    registreringshjemler = request.registreringshjemler.orEmpty().toMutableSet(),
+                    avsluttetAvSaksbehandler = request.avsluttetAvSaksbehandler,
                 ),
             ).toResponse()
 
@@ -55,6 +59,10 @@ class SaksdataService(
         val entity = find(id)
         entity.kabalReference = request.kabalReference
         entity.sakstype = request.sakstype
+        entity.ytelse = request.ytelse
+        entity.utfall = request.utfall
+        entity.registreringshjemler = request.registreringshjemler.orEmpty().toMutableSet()
+        entity.avsluttetAvSaksbehandler = request.avsluttetAvSaksbehandler
         return repository.saveAndFlush(entity).toResponse()
     }
 

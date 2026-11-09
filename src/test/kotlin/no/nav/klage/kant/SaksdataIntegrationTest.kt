@@ -8,6 +8,9 @@ import io.kotest.matchers.shouldBe
 import no.nav.klage.auth.test.MockAzure
 import no.nav.klage.kant.repositories.SaksdataRepository
 import no.nav.klage.kodeverk.Type
+import no.nav.klage.kodeverk.Utfall
+import no.nav.klage.kodeverk.hjemmel.Registreringshjemmel
+import no.nav.klage.kodeverk.ytelse.Ytelse
 import no.nav.security.mock.oauth2.token.DefaultOAuth2TokenCallback
 import no.nav.security.mock.oauth2.token.KeyProvider
 import no.nav.security.mock.oauth2.token.OAuth2TokenProvider
@@ -37,6 +40,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.json.JsonMapper
 import java.time.Instant
+import java.time.LocalDateTime
 import java.util.UUID
 
 @SpringBootTest
@@ -124,10 +128,117 @@ class SaksdataIntegrationTest {
             created["sakstype"].asString() shouldBe type.name
             val id = UUID.fromString(created["id"].asString())
             repository.findById(id).orElseThrow().sakstype shouldBe type
-            jdbc.queryForObject("SELECT sakstype FROM saksdata WHERE id = ?", String::class.java, id) shouldBe type.id
+            jdbc.queryForObject(
+                "SELECT sakstype_id FROM saksdata WHERE id = ?",
+                String::class.java,
+                id,
+            ) shouldBe type.id
             authorized(get("/api/saksdata/$id")).andExpect(jsonPath("$.sakstype").value(type.name))
         }
         repository.count() shouldBe Type.entries.size.toLong()
+    }
+
+    @Test
+    fun `persists expanded fields and replaces collections on update`() {
+        val reference = UUID.randomUUID()
+        val avsluttet = LocalDateTime.of(2026, 11, 9, 15, 30, 45, 123456000)
+        val hjemler = listOf(Registreringshjemmel.FTRL_1_3, Registreringshjemmel.FTRL_1_5)
+        val payload =
+            """
+            {
+                "kabalReference":"$reference",
+                "sakstype":"${Type.KLAGE.name}",
+                "ytelse":"${Ytelse.SYK_SYK.name}",
+                "utfall":"${Utfall.MEDHOLD.name}",
+                "registreringshjemler":["${hjemler[0].name}","${hjemler[1].name}","${hjemler[0].name}"],
+                "avsluttetAvSaksbehandler":"$avsluttet"
+            }
+            """.trimIndent()
+        val created =
+            authorized(post("/api/saksdata").contentType(MediaType.APPLICATION_JSON).content(payload))
+                .andExpect(status().isCreated)
+                .andExpect(jsonPath("$.ytelse").value(Ytelse.SYK_SYK.name))
+                .andExpect(jsonPath("$.utfall").value(Utfall.MEDHOLD.name))
+                .andExpect(jsonPath("$.registreringshjemler.length()").value(2))
+                .andExpect(jsonPath("$.avsluttetAvSaksbehandler").value(avsluttet.toString()))
+                .andReturn()
+                .response
+        val id = UUID.fromString(mapper.readTree(created.contentAsString)["id"].asString())
+        val stored = repository.findById(id).orElseThrow()
+        stored.ytelse shouldBe Ytelse.SYK_SYK
+        stored.utfall shouldBe Utfall.MEDHOLD
+        stored.registreringshjemler shouldBe hjemler.toSet()
+        stored.avsluttetAvSaksbehandler shouldBe avsluttet
+        jdbc.queryForObject(
+            "SELECT ytelse_id FROM saksdata WHERE id = ?",
+            String::class.java,
+            id,
+        ) shouldBe Ytelse.SYK_SYK.id
+        jdbc.queryForObject(
+            "SELECT utfall_id FROM saksdata WHERE id = ?",
+            String::class.java,
+            id,
+        ) shouldBe Utfall.MEDHOLD.id
+        jdbc
+            .queryForList("SELECT id FROM kaka.registreringshjemmel WHERE saksdata_id = ?", String::class.java, id)
+            .toSet() shouldBe hjemler.map { it.id }.toSet()
+        authorized(get("/api/saksdata/$id"))
+            .andExpect(jsonPath("$.ytelse").value(Ytelse.SYK_SYK.name))
+            .andExpect(jsonPath("$.utfall").value(Utfall.MEDHOLD.name))
+            .andExpect(jsonPath("$.registreringshjemler.length()").value(2))
+            .andExpect(jsonPath("$.avsluttetAvSaksbehandler").value(avsluttet.toString()))
+        authorized(get("/api/saksdata"))
+            .andExpect(jsonPath("$.content[0].ytelse").value(Ytelse.SYK_SYK.name))
+            .andExpect(jsonPath("$.content[0].registreringshjemler.length()").value(2))
+
+        val replacement = payload.replace(hjemler[0].name, Registreringshjemmel.FTRL_2_1.name)
+        authorized(put("/api/saksdata/$id").contentType(MediaType.APPLICATION_JSON).content(replacement))
+            .andExpect(status().isOk)
+        repository.findById(id).orElseThrow().registreringshjemler shouldBe
+            setOf(Registreringshjemmel.FTRL_2_1, hjemler[1])
+
+        deleteAndCheckHjemler(id)
+    }
+
+    @Test
+    fun `full update changes required ytelse and clears optional fields when omitted or explicitly null`() {
+        val nullFields =
+            ""","utfall":null,"registreringshjemler":null,"avsluttetAvSaksbehandler":null"""
+        for (optionalFields in listOf("", nullFields)) {
+            val reference = UUID.randomUUID()
+            val initial =
+                """
+                {
+                    "kabalReference":"$reference",
+                    "sakstype":"${Type.KLAGE.name}",
+                    "ytelse":"${Ytelse.SYK_SYK.name}",
+                    "utfall":"${Utfall.MEDHOLD.name}",
+                    "registreringshjemler":["${Registreringshjemmel.FTRL_1_3.name}"],
+                    "avsluttetAvSaksbehandler":"2026-11-09T15:30:45"
+                }
+                """.trimIndent()
+            val response =
+                authorized(post("/api/saksdata").contentType(MediaType.APPLICATION_JSON).content(initial))
+                    .andExpect(status().isCreated)
+                    .andReturn()
+                    .response
+            val id = UUID.fromString(mapper.readTree(response.contentAsString)["id"].asString())
+            val replacement =
+                """
+                {"kabalReference":"$reference","sakstype":"${Type.KLAGE.name}","ytelse":"${Ytelse.AAP_AAP.name}"$optionalFields}
+                """.trimIndent()
+            authorized(put("/api/saksdata/$id").contentType(MediaType.APPLICATION_JSON).content(replacement))
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.ytelse").value(Ytelse.AAP_AAP.name))
+                .andExpect(jsonPath("$.utfall").isEmpty)
+                .andExpect(jsonPath("$.registreringshjemler").isEmpty)
+                .andExpect(jsonPath("$.avsluttetAvSaksbehandler").isEmpty)
+            val stored = repository.findById(id).orElseThrow()
+            stored.ytelse shouldBe Ytelse.AAP_AAP
+            stored.utfall shouldBe null
+            stored.registreringshjemler shouldBe emptySet()
+            stored.avsluttetAvSaksbehandler shouldBe null
+        }
     }
 
     @Test
@@ -152,14 +263,25 @@ class SaksdataIntegrationTest {
     @Test
     fun `rejects malformed missing null fields and invalid pagination with sanitized problems`() {
         val reference = UUID.randomUUID()
+        val validFields = """"kabalReference":"$reference","sakstype":"KLAGE","ytelse":"${Ytelse.SYK_SYK.name}""""
         val invalidBodies =
             listOf(
                 "{}",
-                """{"kabalReference":null,"sakstype":"${Type.entries.first().name}"}""",
-                """{"kabalReference":"$reference","sakstype":null}""",
-                """{"kabalReference":"not-a-uuid","sakstype":"${Type.entries.first().name}"}""",
-                """{"kabalReference":"$reference","sakstype":"PRIVATE_REJECTED_VALUE"}""",
-                """{"kabalReference":"$reference","sakstype":0}""",
+                """{${validFields.replace("\"$reference\"", "null")}}""",
+                """{${validFields.replace("\"KLAGE\"", "null")}}""",
+                """{${validFields.replace(reference.toString(), "not-a-uuid")}}""",
+                """{${validFields.replace("KLAGE", "PRIVATE_REJECTED_VALUE")}}""",
+                """{${validFields.replace("\"KLAGE\"", "0")}}""",
+                """{${validFields.replace(Ytelse.SYK_SYK.name, "PRIVATE_REJECTED_VALUE")}}""",
+                """{${validFields.replace("\"${Ytelse.SYK_SYK.name}\"", "null")}}""",
+                """{${validFields.replace("\"${Ytelse.SYK_SYK.name}\"", "0")}}""",
+                """{$validFields,"utfall":"PRIVATE_REJECTED_VALUE"}""",
+                """{$validFields,"registreringshjemler":["PRIVATE_REJECTED_VALUE"]}""",
+                """{$validFields,"registreringshjemler":[null]}""",
+                """{$validFields,"avsluttetAvSaksbehandler":"PRIVATE_REJECTED_VALUE"}""",
+                """{"sakstype":"KLAGE","ytelse":"${Ytelse.SYK_SYK.name}"}""",
+                """{"kabalReference":"$reference","ytelse":"${Ytelse.SYK_SYK.name}"}""",
+                """{"kabalReference":"$reference","sakstype":"KLAGE"}""",
                 """{"kabalReference":"$reference"}""",
                 """{"sakstype":"${Type.entries.first().name}"}""",
                 "{",
@@ -170,6 +292,11 @@ class SaksdataIntegrationTest {
                     .andExpect(status().isBadRequest)
                     .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                     .andExpect(jsonPath("$.detail").value("Invalid request"))
+                    .andExpect { result ->
+                        val response = result.response.contentAsString
+                        response.contains(reference.toString()) shouldBe false
+                        response.contains("PRIVATE_REJECTED_VALUE") shouldBe false
+                    }
             }
         }
         listOf("page=-1", "size=0", "size=-1", "size=101", "page=invalid", "size=invalid").forEach { query ->
@@ -322,7 +449,11 @@ class SaksdataIntegrationTest {
             authorized(
                 post("/api/saksdata")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content("""{"kabalReference":"$reference","sakstype":"PRIVATE_PAYLOAD"}"""),
+                    .content(
+                        """
+                        {"kabalReference":"$reference","sakstype":"PRIVATE_PAYLOAD","ytelse":"${Ytelse.SYK_SYK.name}"}
+                        """.trimIndent(),
+                    ),
                 token,
             ).andExpect(status().isBadRequest)
             authorized(get("/api/saksdata/${UUID.randomUUID()}"), token).andExpect(status().isNotFound)
@@ -390,5 +521,14 @@ class SaksdataIntegrationTest {
     private fun body(
         reference: UUID,
         type: Type,
-    ): String = """{"kabalReference":"$reference","sakstype":"${type.name}"}"""
+    ): String = """{"kabalReference":"$reference","sakstype":"${type.name}","ytelse":"${Ytelse.SYK_SYK.name}"}"""
+
+    private fun deleteAndCheckHjemler(id: UUID) {
+        authorized(delete("/api/saksdata/$id")).andExpect(status().isNoContent)
+        jdbc.queryForObject(
+            "SELECT count(*) FROM kaka.registreringshjemmel WHERE saksdata_id = ?",
+            Long::class.java,
+            id,
+        ) shouldBe 0L
+    }
 }
