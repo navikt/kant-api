@@ -180,7 +180,7 @@ class SaksdataIntegrationTest {
             id,
         ) shouldBe Utfall.MEDHOLD.id
         jdbc
-            .queryForList("SELECT id FROM kaka.registreringshjemmel WHERE saksdata_id = ?", String::class.java, id)
+            .queryForList("SELECT id FROM registreringshjemmel WHERE saksdata_id = ?", String::class.java, id)
             .toSet() shouldBe hjemler.map { it.id }.toSet()
         authorized(get("/api/saksdata/$id"))
             .andExpect(jsonPath("$.ytelse").value(Ytelse.SYK_SYK.name))
@@ -526,7 +526,7 @@ class SaksdataIntegrationTest {
     private fun deleteAndCheckHjemler(id: UUID) {
         authorized(delete("/api/saksdata/$id")).andExpect(status().isNoContent)
         jdbc.queryForObject(
-            "SELECT count(*) FROM kaka.registreringshjemmel WHERE saksdata_id = ?",
+            "SELECT count(*) FROM registreringshjemmel WHERE saksdata_id = ?",
             Long::class.java,
             id,
         ) shouldBe 0L

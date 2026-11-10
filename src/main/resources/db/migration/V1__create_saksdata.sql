@@ -9,9 +9,7 @@ CREATE TABLE saksdata (
     modified TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE SCHEMA kaka;
-
-CREATE TABLE kaka.registreringshjemmel (
+CREATE TABLE registreringshjemmel (
     saksdata_id UUID NOT NULL REFERENCES saksdata(id) ON DELETE CASCADE,
     id TEXT NOT NULL,
     PRIMARY KEY (saksdata_id, id)

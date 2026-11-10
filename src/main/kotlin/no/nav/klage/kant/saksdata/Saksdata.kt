@@ -41,7 +41,6 @@ class Saksdata(
     @ElementCollection(targetClass = Registreringshjemmel::class, fetch = FetchType.EAGER)
     @CollectionTable(
         name = "registreringshjemmel",
-        schema = "kaka",
         joinColumns = [JoinColumn(name = "saksdata_id", referencedColumnName = "id", nullable = false)],
     )
     @Convert(converter = RegistreringshjemmelConverter::class)
