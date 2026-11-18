@@ -1,19 +1,26 @@
+import dev.detekt.gradle.plugin.getSupportedKotlinVersion
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 
+val ktlintVersion = "1.8.0"
+val klageAuthVersion = "0.4.0"
+val klageKodeverkVersion = "3.4.9"
+
 plugins {
-    kotlin("jvm") version "2.4.20"
-    kotlin("plugin.spring") version "2.4.20"
-    kotlin("plugin.jpa") version "2.4.20"
-    kotlin("plugin.allopen") version "2.4.20"
+    val kotlinVersion = "2.4.21"
+    kotlin("jvm") version kotlinVersion
+    kotlin("plugin.spring") version kotlinVersion
+    kotlin("plugin.jpa") version kotlinVersion
+    kotlin("plugin.allopen") version kotlinVersion
     id("org.springframework.boot") version "4.1.2"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
     id("dev.detekt") version "2.0.0-alpha.6"
+    idea
+    kotlin("kapt") version kotlinVersion
 }
-
-group = "no.nav.klage"
-version = "0.0.1-SNAPSHOT"
 
 java {
     toolchain {
@@ -32,10 +39,6 @@ repositories {
     maven("https://github-package-registry-mirror.gc.nav.no/cached/maven-release")
 }
 
-dependencyLocking {
-    lockAllConfigurations()
-}
-
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("tools.jackson.module:jackson-module-kotlin")
@@ -48,14 +51,14 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("io.micrometer:micrometer-registry-prometheus")
-    implementation("no.nav.klage:klage-auth:0.4.0")
-    implementation("no.nav.klage:klage-kodeverk:3.4.9")
+    implementation("no.nav.klage:klage-auth:$klageAuthVersion")
+    implementation("no.nav.klage:klage-kodeverk:$klageKodeverkVersion")
     runtimeOnly("org.postgresql:postgresql")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
-    testImplementation("no.nav.klage:klage-auth-test:0.4.0")
+    testImplementation("no.nav.klage:klage-auth-test:$klageAuthVersion")
     testImplementation(platform("org.testcontainers:testcontainers-bom:1.21.4"))
     testImplementation("org.testcontainers:postgresql")
     testImplementation("org.testcontainers:junit-jupiter")
@@ -63,52 +66,79 @@ dependencies {
 }
 
 ktlint {
-    version.set("1.8.0")
+    version.set(ktlintVersion)
+    ignoreFailures.set(false)
+    reporters {
+        reporter(ReporterType.PLAIN)
+        reporter(ReporterType.CHECKSTYLE)
+    }
+    filter {
+        exclude { it.file.path.contains("${File.separator}build${File.separator}") }
+    }
+}
+
+detekt {
+    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+    buildUponDefaultConfig.set(true)
     ignoreFailures.set(false)
 }
 
-// ktlint embeds Kotlin 2.2.21; the application's Kotlin version cannot replace its compiler.
-configurations.matching { it.name.startsWith("ktlint") }.configureEach {
+// io.spring.dependency-management applies the Kotlin BOM to every configuration,
+// which would force the linters onto the project's Kotlin compiler. Both tools are
+// built against a specific compiler version and break when it changes.
+configurations.matching { it.name == "detekt" }.configureEach {
     resolutionStrategy.eachDependency {
         if (requested.group == "org.jetbrains.kotlin") {
-            useVersion("2.2.21")
+            useVersion(getSupportedKotlinVersion())
         }
     }
 }
 
-configurations.matching { it.name == "detekt" }.configureEach {
+// ktlint-gradle has no equivalent of getSupportedKotlinVersion(), so keep the
+// version that ktlint itself declares instead of the one forced by the BOM.
+configurations.matching { it.name.startsWith("ktlint") }.configureEach {
     resolutionStrategy.eachDependency {
         if (requested.group == "org.jetbrains.kotlin") {
-            useVersion("2.4.10")
+            useVersion(requested.version!!)
         }
     }
+}
+
+// NamedArguments implements RequiresAnalysisApi, so it only reports when detekt
+// runs with a compile classpath. The plain `detekt` task has no classpath and
+// would silently pass, hence the analysis aware tasks are wired into `check`
+// and the plain one is disabled.
+tasks.named("detekt") {
+    enabled = false
 }
 
 tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
-        freeCompilerArgs.add("-Xjsr305=strict")
+        freeCompilerArgs = listOf("-Xjsr305=strict", "-Xannotation-default-target=param-property")
     }
 }
 
 tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
-    jvmTarget.set("25")
-}
-
-tasks.withType<Test>().configureEach {
-    useJUnitPlatform()
+    jvmTarget.set(JvmTarget.JVM_25.target)
+    reports {
+        html.required.set(true)
+        checkstyle.required.set(true)
+        sarif.required.set(false)
+        markdown.required.set(false)
+    }
 }
 
 tasks.named("check") {
     dependsOn("detektMain", "detektTest")
 }
 
-tasks.named<BootJar>("bootJar") {
-    archiveFileName.set("kant-api.jar")
+tasks.withType<Test> {
+    useJUnitPlatform()
+    testLogging {
+        events("passed", "skipped", "failed")
+    }
 }
 
-tasks.register<JavaExec>("runLocal") {
-    group = "application"
-    description = "Run with local PostgreSQL and a test-only Azure issuer"
-    classpath = sourceSets.test.get().runtimeClasspath
-    mainClass.set("no.nav.klage.kant.LocalApplicationKt")
+tasks.named<BootJar>("bootJar") {
+    archiveFileName.set("kant-api.jar")
 }

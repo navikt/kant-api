@@ -1,0 +1,433 @@
+package no.nav.klage.kant.services
+
+import io.kotest.matchers.shouldBe
+import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeITRKvalitetsvurderingV1
+import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeKvalitetsvurderingV1
+import no.nav.klage.kant.domain.kvalitetsvurdering.Kvalitetsvurdering
+import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationException
+import no.nav.klage.kant.domain.saksdata.Saksdata
+import no.nav.klage.kant.domain.saksdata.SaksdataAvslutningRequest
+import no.nav.klage.kant.domain.saksdata.SaksdataRequest
+import no.nav.klage.kant.domain.saksdata.SaksdataUpdateRequest
+import no.nav.klage.kant.domain.saksdata.toResponse
+import no.nav.klage.kant.repositories.SaksdataRepository
+import no.nav.klage.kodeverk.Type
+import no.nav.klage.kodeverk.Utfall
+import no.nav.klage.kodeverk.hjemmel.Registreringshjemmel
+import no.nav.klage.kodeverk.ytelse.Ytelse
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
+import org.mockito.Mockito.times
+import org.mockito.Mockito.verify
+import org.mockito.Mockito.verifyNoInteractions
+import org.mockito.Mockito.`when`
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.util.Optional
+import java.util.UUID
+
+class SaksdataServiceTest {
+    private val repository = mock(SaksdataRepository::class.java)
+    private val service = SaksdataService(repository)
+    private val reference = UUID.randomUUID()
+    private val mottatt = LocalDate.of(2026, 11, 1)
+
+    @ParameterizedTest
+    @EnumSource(value = Type::class, names = ["ANKE_ETTER_2027", "ANKE_I_TRYGDERETTEN_ETTER_2027"])
+    fun `creates open saksdata with received date`(sakstype: Type) {
+        `when`(repository.findByKabalReference(reference)).thenReturn(null)
+        `when`(repository.save(any(Saksdata::class.java))).thenAnswer { it.getArgument<Saksdata>(0) }
+
+        val response =
+            service.create(
+                SaksdataRequest(
+                    kabalReference = reference,
+                    sakstype = sakstype,
+                    ytelse = Ytelse.SYK_SYK,
+                    mottattKlageinstans = mottatt,
+                ),
+            )
+
+        response.kabalReference shouldBe reference
+        response.sakstype shouldBe sakstype
+        response.ytelse shouldBe Ytelse.SYK_SYK
+        response.mottattKlageinstans shouldBe mottatt
+        response.avsluttetAvSaksbehandler shouldBe null
+        response.sakITrygderettenOpprettet shouldBe null
+        response.tilknyttetEnhet shouldBe null
+        response.tilbakekreving shouldBe null
+        response.kvalitetsvurdering shouldBe defaultKvalitetsvurdering(sakstype)
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+        value = Type::class,
+        names = ["ANKE_ETTER_2027", "ANKE_I_TRYGDERETTEN_ETTER_2027"],
+        mode = EnumSource.Mode.EXCLUDE,
+    )
+    fun `rejects unsupported types before accessing repository`(sakstype: Type) {
+        val request =
+            SaksdataRequest(
+                kabalReference = reference,
+                sakstype = sakstype,
+                ytelse = Ytelse.SYK_SYK,
+                mottattKlageinstans = mottatt,
+            )
+
+        assertThrows<InvalidSakstypeException> { service.create(request) }
+
+        verifyNoInteractions(repository)
+    }
+
+    @Test
+    fun `repeated creation returns existing saksdata without saving`() {
+        val entity = saksdata()
+        `when`(repository.findByKabalReference(reference)).thenReturn(entity)
+
+        val response =
+            service.create(
+                SaksdataRequest(
+                    kabalReference = reference,
+                    sakstype = entity.sakstype,
+                    ytelse = entity.ytelse,
+                    mottattKlageinstans = mottatt,
+                ),
+            )
+
+        response.id shouldBe entity.id
+        verify(repository, never()).save(any(Saksdata::class.java))
+    }
+
+    @Test
+    fun `returns stored saksdata and rejects missing id`() {
+        val entity = saksdata()
+        `when`(repository.findById(entity.id)).thenReturn(Optional.of(entity))
+        service.get(entity.id).mottattKlageinstans shouldBe mottatt
+
+        val missingId = UUID.randomUUID()
+        `when`(repository.findById(missingId)).thenReturn(Optional.empty())
+        `when`(repository.findForUpdate(missingId)).thenReturn(null)
+        assertThrows<SaksdataNotFoundException> { service.get(missingId) }
+        assertThrows<SaksdataNotFoundException> {
+            service.update(id = missingId, request = SaksdataUpdateRequest())
+        }
+    }
+
+    @Test
+    fun `editing replaces and clears outcome and legal bases without changing identity`() {
+        val entity = saksdata()
+        prepareUpdate(entity)
+        val hjemler = setOf(Registreringshjemmel.FTRL_1_3)
+
+        val response =
+            service.update(
+                id = entity.id,
+                request = SaksdataUpdateRequest(utfall = Utfall.MEDHOLD, registreringshjemler = hjemler),
+            )
+
+        response.utfall shouldBe Utfall.MEDHOLD
+        response.registreringshjemler shouldBe hjemler
+        response.kabalReference shouldBe reference
+        response.mottattKlageinstans shouldBe mottatt
+        response.avsluttetAvSaksbehandler shouldBe null
+
+        val cleared = service.update(id = entity.id, request = SaksdataUpdateRequest())
+        cleared.utfall shouldBe null
+        cleared.registreringshjemler shouldBe emptySet()
+        verify(repository, times(2)).findForUpdate(entity.id)
+    }
+
+    @Test
+    fun `finalization stores completion fields including false and optional date`() {
+        listOf(null, mottatt.plusDays(1)).forEach { opprettet ->
+            val entity = saksdata()
+            entity.kvalitetsvurdering = validAnkeAssessment()
+            prepareUpdate(entity)
+            val request = avslutning().copy(sakITrygderettenOpprettet = opprettet)
+
+            val response = service.finalize(id = entity.id, request = request)
+
+            response.utfall shouldBe request.utfall
+            response.registreringshjemler shouldBe request.registreringshjemler
+            response.avsluttetAvSaksbehandler shouldBe request.avsluttetAvSaksbehandler
+            response.sakITrygderettenOpprettet shouldBe opprettet
+            response.tilknyttetEnhet shouldBe request.tilknyttetEnhet
+            response.tilbakekreving shouldBe false
+            response.mottattKlageinstans shouldBe mottatt
+            verify(repository).findForUpdate(entity.id)
+        }
+    }
+
+    @Test
+    fun `finalization accepts assessment homes present only in incoming request`() {
+        val entity = saksdata()
+        entity.kvalitetsvurdering = ankeAssessmentWithSelectedHome()
+        prepareUpdate(entity)
+
+        val response = service.finalize(id = entity.id, request = avslutning())
+
+        response.registreringshjemler shouldBe setOf(Registreringshjemmel.FTRL_1_3)
+        verify(repository).findForUpdate(entity.id)
+    }
+
+    @Test
+    fun `invalid finalization leaves entity unchanged when assessment home exists only in stored homes`() {
+        val entity =
+            saksdata().apply {
+                kvalitetsvurdering = ankeAssessmentWithSelectedHome()
+                registreringshjemler = setOf(Registreringshjemmel.FTRL_1_3)
+            }
+        prepareUpdate(entity)
+        val before = entity.toResponse()
+
+        assertThrows<KvalitetsvurderingValidationException> {
+            service.finalize(
+                id = entity.id,
+                request = avslutning().copy(registreringshjemler = emptySet()),
+            )
+        }
+
+        entity.toResponse() shouldBe before
+        verify(repository, never()).saveAndFlush(entity)
+        verify(repository).findForUpdate(entity.id)
+    }
+
+    @Test
+    fun `closed saksdata rejects editing and finalization without saving`() {
+        val entity =
+            saksdata().apply {
+                avsluttetAvSaksbehandler = avslutning().avsluttetAvSaksbehandler
+                utfall = Utfall.STADFESTELSE
+            }
+        `when`(repository.findForUpdate(entity.id)).thenReturn(entity)
+
+        assertThrows<SaksdataConflictException> {
+            service.update(id = entity.id, request = SaksdataUpdateRequest(utfall = Utfall.MEDHOLD))
+        }
+        assertThrows<SaksdataConflictException> {
+            service.finalize(id = entity.id, request = avslutning())
+        }
+
+        entity.utfall shouldBe Utfall.STADFESTELSE
+        verify(repository, never()).saveAndFlush(any(Saksdata::class.java))
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = Type::class, names = ["ANKE_ETTER_2027", "ANKE_I_TRYGDERETTEN_ETTER_2027"])
+    fun `quality assessment update replaces the existing assessment`(sakstype: Type) {
+        val entity =
+            saksdata(sakstype).apply {
+                kvalitetsvurdering = nonDefaultKvalitetsvurdering(sakstype)
+            }
+        prepareUpdate(entity)
+        val requested = defaultKvalitetsvurdering(sakstype)
+
+        val response = service.updateKvalitetsvurdering(id = entity.id, request = requested)
+
+        response.kvalitetsvurdering shouldBe requested
+        response.kabalReference shouldBe reference
+        response.sakstype shouldBe sakstype
+        response.mottattKlageinstans shouldBe mottatt
+        entity.kvalitetsvurdering shouldBe requested
+        verify(repository).saveAndFlush(entity)
+        verify(repository).findForUpdate(entity.id)
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = Type::class, names = ["ANKE_ETTER_2027", "ANKE_I_TRYGDERETTEN_ETTER_2027"])
+    fun `quality assessment update rejects mismatched variants without saving`(sakstype: Type) {
+        val entity =
+            saksdata(sakstype).apply {
+                kvalitetsvurdering = defaultKvalitetsvurdering(sakstype)
+            }
+        prepareUpdate(entity)
+        val original = entity.kvalitetsvurdering
+
+        assertThrows<InvalidKvalitetsvurderingTypeException> {
+            service.updateKvalitetsvurdering(
+                id = entity.id,
+                request = defaultKvalitetsvurdering(otherSupportedType(sakstype)),
+            )
+        }
+
+        entity.kvalitetsvurdering shouldBe original
+        verify(repository, never()).saveAndFlush(any(Saksdata::class.java))
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = Type::class, names = ["ANKE_ETTER_2027", "ANKE_I_TRYGDERETTEN_ETTER_2027"])
+    fun `quality assessment update accepts semantically invalid drafts`(sakstype: Type) {
+        val entity = saksdata(sakstype)
+        prepareUpdate(entity)
+        val draft = invalidDraft(sakstype)
+
+        val response = service.updateKvalitetsvurdering(id = entity.id, request = draft)
+
+        response.kvalitetsvurdering shouldBe draft
+        entity.kvalitetsvurdering shouldBe draft
+        verify(repository).saveAndFlush(entity)
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = Type::class, names = ["ANKE_ETTER_2027", "ANKE_I_TRYGDERETTEN_ETTER_2027"])
+    fun `quality assessment update rejects missing and closed saksdata without saving`(sakstype: Type) {
+        val missingId = UUID.randomUUID()
+        `when`(repository.findForUpdate(missingId)).thenReturn(null)
+        assertThrows<SaksdataNotFoundException> {
+            service.updateKvalitetsvurdering(
+                id = missingId,
+                request = defaultKvalitetsvurdering(sakstype),
+            )
+        }
+
+        val closedEntity =
+            saksdata(sakstype).apply {
+                avsluttetAvSaksbehandler = avslutning().avsluttetAvSaksbehandler
+                kvalitetsvurdering = defaultKvalitetsvurdering(sakstype)
+            }
+        `when`(repository.findForUpdate(closedEntity.id)).thenReturn(closedEntity)
+        assertThrows<SaksdataConflictException> {
+            service.updateKvalitetsvurdering(
+                id = closedEntity.id,
+                request = defaultKvalitetsvurdering(sakstype),
+            )
+        }
+
+        verify(repository, never()).saveAndFlush(any(Saksdata::class.java))
+    }
+
+    private fun prepareUpdate(entity: Saksdata) {
+        `when`(repository.findForUpdate(entity.id)).thenReturn(entity)
+        `when`(repository.saveAndFlush(entity)).thenReturn(entity)
+    }
+
+    private fun validAnkeAssessment(): AnkeKvalitetsvurderingV1 =
+        AnkeKvalitetsvurderingV1(
+            omgjortIKlageomgangen =
+                AnkeKvalitetsvurderingV1.OmgjortIKlageomgangen(
+                    vedtaketBurdeVaertOmgjortIKlageomgangen = false,
+                ),
+        )
+
+    private fun ankeAssessmentWithSelectedHome(): AnkeKvalitetsvurderingV1 =
+        AnkeKvalitetsvurderingV1(
+            omgjortIKlageomgangen =
+                AnkeKvalitetsvurderingV1.OmgjortIKlageomgangen(
+                    vedtaketBurdeVaertOmgjortIKlageomgangen = true,
+                    feilILovtolkningen =
+                        AnkeKvalitetsvurderingV1.OmgjortIKlageomgangen.SelectorWithRegistreringshjemler(
+                            selected = true,
+                            registreringshjemler = listOf(Registreringshjemmel.FTRL_1_3),
+                        ),
+                ),
+        )
+
+    private fun saksdata(sakstype: Type = Type.ANKE_ETTER_2027): Saksdata =
+        Saksdata(
+            kabalReference = reference,
+            sakstype = sakstype,
+            ytelse = Ytelse.SYK_SYK,
+            mottattKlageinstans = mottatt,
+            sakITrygderettenOpprettet = null,
+            tilknyttetEnhet = null,
+            tilbakekreving = null,
+        )
+
+    private fun defaultKvalitetsvurdering(sakstype: Type): Kvalitetsvurdering =
+        when (sakstype) {
+            Type.ANKE_ETTER_2027 -> AnkeKvalitetsvurderingV1()
+            Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> AnkeITRKvalitetsvurderingV1()
+            else -> error("Unsupported type in test")
+        }
+
+    private fun nonDefaultKvalitetsvurdering(sakstype: Type): Kvalitetsvurdering =
+        when (sakstype) {
+            Type.ANKE_ETTER_2027 -> {
+                AnkeKvalitetsvurderingV1(
+                    omgjortIKlageomgangen =
+                        AnkeKvalitetsvurderingV1.OmgjortIKlageomgangen(
+                            vedtaketBurdeVaertOmgjortIKlageomgangen = false,
+                            feilILovtolkningen =
+                                AnkeKvalitetsvurderingV1.OmgjortIKlageomgangen.SelectorWithRegistreringshjemler(
+                                    selected = true,
+                                    registreringshjemler = listOf(Registreringshjemmel.FTRL_1_3),
+                                ),
+                        ),
+                )
+            }
+
+            Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> {
+                AnkeITRKvalitetsvurderingV1(
+                    omgjortIAnkeomgangen =
+                        AnkeITRKvalitetsvurderingV1.OmgjortIAnkeomgangen(
+                            vedtaketBurdeVaertOmgjortIAnkeomgangen = true,
+                            feilIFaktagrunnlaget =
+                                AnkeITRKvalitetsvurderingV1.OmgjortIAnkeomgangen.SelectorWithRegistreringshjemler(
+                                    selected = true,
+                                    registreringshjemler = listOf(Registreringshjemmel.FTRL_1_3),
+                                ),
+                        ),
+                )
+            }
+
+            else -> {
+                error("Unsupported type in test")
+            }
+        }
+
+    private fun invalidDraft(sakstype: Type): Kvalitetsvurdering =
+        when (sakstype) {
+            Type.ANKE_ETTER_2027 -> {
+                AnkeKvalitetsvurderingV1(
+                    omgjortIKlageomgangen =
+                        AnkeKvalitetsvurderingV1.OmgjortIKlageomgangen(
+                            vedtaketBurdeVaertOmgjortIKlageomgangen = null,
+                            feilILovtolkningen =
+                                AnkeKvalitetsvurderingV1.OmgjortIKlageomgangen.SelectorWithRegistreringshjemler(
+                                    selected = true,
+                                    registreringshjemler = emptyList(),
+                                ),
+                        ),
+                )
+            }
+
+            Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> {
+                AnkeITRKvalitetsvurderingV1(
+                    omgjortIAnkeomgangen =
+                        AnkeITRKvalitetsvurderingV1.OmgjortIAnkeomgangen(
+                            vedtaketBurdeVaertOmgjortIAnkeomgangen = null,
+                            feilIFaktagrunnlaget =
+                                AnkeITRKvalitetsvurderingV1.OmgjortIAnkeomgangen.SelectorWithRegistreringshjemler(
+                                    selected = true,
+                                    registreringshjemler = emptyList(),
+                                ),
+                        ),
+                )
+            }
+
+            else -> {
+                error("Unsupported type in test")
+            }
+        }
+
+    private fun otherSupportedType(sakstype: Type): Type =
+        when (sakstype) {
+            Type.ANKE_ETTER_2027 -> Type.ANKE_I_TRYGDERETTEN_ETTER_2027
+            Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> Type.ANKE_ETTER_2027
+            else -> error("Unsupported type in test")
+        }
+
+    private fun avslutning(): SaksdataAvslutningRequest =
+        SaksdataAvslutningRequest(
+            utfall = Utfall.MEDHOLD,
+            registreringshjemler = setOf(Registreringshjemmel.FTRL_1_3),
+            avsluttetAvSaksbehandler = LocalDateTime.of(2026, 11, 16, 12, 0),
+            tilknyttetEnhet = "4291",
+            tilbakekreving = false,
+        )
+}

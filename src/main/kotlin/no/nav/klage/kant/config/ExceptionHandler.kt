@@ -1,6 +1,10 @@
 package no.nav.klage.kant.config
 
 import jakarta.validation.ConstraintViolationException
+import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationException
+import no.nav.klage.kant.services.InvalidKvalitetsvurderingTypeException
+import no.nav.klage.kant.services.InvalidSakstypeException
+import no.nav.klage.kant.services.SaksdataConflictException
 import no.nav.klage.kant.services.SaksdataNotFoundException
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataAccessException
@@ -17,20 +21,38 @@ import java.net.URI
 import java.util.UUID
 
 @RestControllerAdvice
-class ApiExceptionHandler : ResponseEntityExceptionHandler() {
+class ExceptionHandler : ResponseEntityExceptionHandler() {
     private val log = LoggerFactory.getLogger(javaClass)
 
     @ExceptionHandler(SaksdataNotFoundException::class)
-    fun notFound(): ProblemDetail = problem(HttpStatus.NOT_FOUND, "Saksdata not found")
+    fun notFound(): ProblemDetail = problem(status = HttpStatus.NOT_FOUND, detail = "Saksdata not found")
+
+    @ExceptionHandler(SaksdataConflictException::class)
+    fun conflict(exception: SaksdataConflictException): ProblemDetail =
+        problem(status = HttpStatus.CONFLICT, detail = exception.message ?: "Saksdata conflict")
 
     @ExceptionHandler(ConstraintViolationException::class)
-    fun invalidParameters(): ProblemDetail = problem(HttpStatus.BAD_REQUEST, "Invalid request parameters")
+    fun invalidParameters(): ProblemDetail = problem(status = HttpStatus.BAD_REQUEST, detail = "Invalid request parameters")
+
+    @ExceptionHandler(InvalidSakstypeException::class)
+    fun invalidSakstype(exception: InvalidSakstypeException): ProblemDetail =
+        problem(status = HttpStatus.BAD_REQUEST, detail = exception.message ?: "Invalid sakstype")
+
+    @ExceptionHandler(InvalidKvalitetsvurderingTypeException::class)
+    fun invalidKvalitetsvurderingType(exception: InvalidKvalitetsvurderingTypeException): ProblemDetail =
+        problem(status = HttpStatus.BAD_REQUEST, detail = exception.message ?: "Invalid kvalitetsvurdering type")
+
+    @ExceptionHandler(KvalitetsvurderingValidationException::class)
+    fun invalidKvalitetsvurdering(exception: KvalitetsvurderingValidationException): ProblemDetail =
+        problem(status = HttpStatus.BAD_REQUEST, detail = "Kvalitetsvurdering is incomplete or invalid").apply {
+            setProperty("errors", exception.errors)
+        }
 
     @ExceptionHandler(DataAccessException::class)
     fun databaseFailure(exception: DataAccessException): ProblemDetail {
         val errorId = UUID.randomUUID()
         log.error("Database operation failed: errorId={}, exceptionType={}", errorId, exception.javaClass.simpleName)
-        return problem(HttpStatus.INTERNAL_SERVER_ERROR, "Database operation failed").apply {
+        return problem(status = HttpStatus.INTERNAL_SERVER_ERROR, detail = "Database operation failed").apply {
             setProperty("errorId", errorId)
         }
     }
@@ -39,7 +61,7 @@ class ApiExceptionHandler : ResponseEntityExceptionHandler() {
     fun unexpectedFailure(exception: Exception): ProblemDetail {
         val errorId = UUID.randomUUID()
         log.error("Request failed: errorId={}, exceptionType={}", errorId, exception.javaClass.simpleName)
-        return problem(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error").apply {
+        return problem(status = HttpStatus.INTERNAL_SERVER_ERROR, detail = "Internal server error").apply {
             setProperty("errorId", errorId)
         }
     }
@@ -57,7 +79,7 @@ class ApiExceptionHandler : ResponseEntityExceptionHandler() {
             } else {
                 HttpStatus.valueOf(statusCode.value()).reasonPhrase
             }
-        return ResponseEntity(problem(statusCode, detail), headers, statusCode)
+        return ResponseEntity(problem(status = statusCode, detail = detail), headers, statusCode)
     }
 
     private fun problem(

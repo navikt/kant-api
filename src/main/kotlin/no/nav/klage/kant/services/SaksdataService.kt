@@ -1,14 +1,17 @@
 package no.nav.klage.kant.services
 
+import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeITRKvalitetsvurderingV1
+import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeKvalitetsvurderingV1
+import no.nav.klage.kant.domain.kvalitetsvurdering.Kvalitetsvurdering
+import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidator
+import no.nav.klage.kant.domain.saksdata.Saksdata
+import no.nav.klage.kant.domain.saksdata.SaksdataAvslutningRequest
+import no.nav.klage.kant.domain.saksdata.SaksdataRequest
+import no.nav.klage.kant.domain.saksdata.SaksdataResponse
+import no.nav.klage.kant.domain.saksdata.SaksdataUpdateRequest
+import no.nav.klage.kant.domain.saksdata.toResponse
 import no.nav.klage.kant.repositories.SaksdataRepository
-import no.nav.klage.kant.saksdata.PageMetadata
-import no.nav.klage.kant.saksdata.Saksdata
-import no.nav.klage.kant.saksdata.SaksdataPage
-import no.nav.klage.kant.saksdata.SaksdataRequest
-import no.nav.klage.kant.saksdata.SaksdataResponse
-import no.nav.klage.kant.saksdata.toResponse
-import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Sort
+import no.nav.klage.kodeverk.Type
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -18,61 +21,102 @@ import java.util.UUID
 class SaksdataService(
     private val repository: SaksdataRepository,
 ) {
-    fun list(
-        page: Int,
-        size: Int,
-    ): SaksdataPage {
-        val result = repository.findAll(PageRequest.of(page, size, Sort.by("id")))
-        return SaksdataPage(
-            content = result.content.map { it.toResponse() },
-            page =
-                PageMetadata(
-                    size = result.size,
-                    number = result.number,
-                    totalElements = result.totalElements,
-                    totalPages = result.totalPages,
-                ),
-        )
-    }
-
-    fun get(id: UUID): SaksdataResponse = find(id).toResponse()
+    fun get(id: UUID): SaksdataResponse = findSaksdataOrThrowError(id).toResponse()
 
     @Transactional
-    fun create(request: SaksdataRequest): SaksdataResponse =
-        repository
-            .saveAndFlush(
+    fun create(input: SaksdataRequest): SaksdataResponse {
+        val kvalitetsvurdering =
+            when (input.sakstype) {
+                Type.ANKE_ETTER_2027 -> AnkeKvalitetsvurderingV1()
+                Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> AnkeITRKvalitetsvurderingV1()
+                else -> throw InvalidSakstypeException()
+            }
+        val existingEntity = findSaksdataByKabalReference(id = input.kabalReference)
+        if (existingEntity != null) return existingEntity.toResponse()
+        return repository
+            .save(
                 Saksdata(
-                    kabalReference = request.kabalReference,
-                    sakstype = request.sakstype,
-                    ytelse = request.ytelse,
-                    utfall = request.utfall,
-                    registreringshjemler = request.registreringshjemler.orEmpty().toMutableSet(),
-                    avsluttetAvSaksbehandler = request.avsluttetAvSaksbehandler,
+                    kabalReference = input.kabalReference,
+                    sakstype = input.sakstype,
+                    ytelse = input.ytelse,
+                    mottattKlageinstans = input.mottattKlageinstans,
+                    sakITrygderettenOpprettet = null,
+                    tilknyttetEnhet = null,
+                    tilbakekreving = null,
+                    kvalitetsvurdering = kvalitetsvurdering,
                 ),
             ).toResponse()
+    }
 
     @Transactional
-    fun update(
+    fun updateKvalitetsvurdering(
         id: UUID,
-        request: SaksdataRequest,
+        request: Kvalitetsvurdering,
     ): SaksdataResponse {
-        val entity = find(id)
-        entity.kabalReference = request.kabalReference
-        entity.sakstype = request.sakstype
-        entity.ytelse = request.ytelse
-        entity.utfall = request.utfall
-        entity.registreringshjemler = request.registreringshjemler.orEmpty().toMutableSet()
-        entity.avsluttetAvSaksbehandler = request.avsluttetAvSaksbehandler
+        val entity = findForUpdate(id)
+        val matchesSakstype =
+            when (entity.sakstype) {
+                Type.ANKE_ETTER_2027 -> request is AnkeKvalitetsvurderingV1
+                Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> request is AnkeITRKvalitetsvurderingV1
+                else -> false
+            }
+        if (!matchesSakstype) throw InvalidKvalitetsvurderingTypeException()
+        entity.kvalitetsvurdering = request
         return repository.saveAndFlush(entity).toResponse()
     }
 
     @Transactional
-    fun delete(id: UUID) {
-        repository.delete(find(id))
-        repository.flush()
+    fun update(
+        id: UUID,
+        request: SaksdataUpdateRequest,
+    ): SaksdataResponse {
+        // Meget mulig at dette feltet bare skal gjelde modellen FE bruker
+        val entity = findForUpdate(id)
+        entity.utfall = request.utfall
+        entity.registreringshjemler = request.registreringshjemler.toMutableSet()
+        return repository.saveAndFlush(entity).toResponse()
     }
 
-    private fun find(id: UUID): Saksdata = repository.findById(id).orElseThrow { SaksdataNotFoundException() }
+    @Transactional
+    fun finalize(
+        id: UUID,
+        request: SaksdataAvslutningRequest,
+    ): SaksdataResponse {
+        val entity = findForUpdate(id)
+        KvalitetsvurderingValidator.validate(
+            sakstype = entity.sakstype,
+            kvalitetsvurdering = entity.kvalitetsvurdering,
+            registreringshjemler = request.registreringshjemler,
+        )
+        entity.utfall = request.utfall
+        entity.registreringshjemler = request.registreringshjemler.toMutableSet()
+        entity.avsluttetAvSaksbehandler = request.avsluttetAvSaksbehandler
+        entity.sakITrygderettenOpprettet = request.sakITrygderettenOpprettet
+        entity.tilknyttetEnhet = request.tilknyttetEnhet
+        entity.tilbakekreving = request.tilbakekreving
+        return repository.saveAndFlush(entity).toResponse()
+    }
+
+    private fun findSaksdataOrThrowError(id: UUID): Saksdata = repository.findById(id).orElseThrow { SaksdataNotFoundException() }
+
+    private fun findSaksdataByKabalReference(id: UUID): Saksdata? = repository.findByKabalReference(id)
+
+    private fun findForUpdate(id: UUID): Saksdata {
+        val entity = repository.findForUpdate(id) ?: throw SaksdataNotFoundException()
+        if (entity.isAvsluttetAvSaksbehandler()) throw SaksdataConflictException("Saksdata is already finalized")
+        return entity
+    }
 }
 
+class InvalidSakstypeException :
+    RuntimeException(
+        "Saksdata can only be created for ANKE_ETTER_2027 and ANKE_I_TRYGDERETTEN_ETTER_2027",
+    )
+
+class InvalidKvalitetsvurderingTypeException : RuntimeException("Kvalitetsvurdering type does not match sakstype")
+
 class SaksdataNotFoundException : RuntimeException("Saksdata not found")
+
+class SaksdataConflictException(
+    message: String,
+) : RuntimeException(message)

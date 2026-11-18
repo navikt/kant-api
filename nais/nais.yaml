@@ -53,6 +53,9 @@ spec:
         - application: kabal-api
           namespace: klage
           cluster: {{ cluster }}
+        - application: kabal-frontend
+          namespace: klage
+          cluster: {{ cluster }}
   gcp:
     sqlInstances:
       - name: kant-api-priv

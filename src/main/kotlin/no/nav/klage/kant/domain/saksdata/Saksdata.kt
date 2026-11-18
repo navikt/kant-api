@@ -1,4 +1,4 @@
-package no.nav.klage.kant.saksdata
+package no.nav.klage.kant.domain.saksdata
 
 import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column
@@ -9,6 +9,7 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.Table
+import no.nav.klage.kant.domain.kvalitetsvurdering.Kvalitetsvurdering
 import no.nav.klage.kodeverk.Type
 import no.nav.klage.kodeverk.TypeConverter
 import no.nav.klage.kodeverk.Utfall
@@ -17,6 +18,9 @@ import no.nav.klage.kodeverk.hjemmel.Registreringshjemmel
 import no.nav.klage.kodeverk.hjemmel.RegistreringshjemmelConverter
 import no.nav.klage.kodeverk.ytelse.Ytelse
 import no.nav.klage.kodeverk.ytelse.YtelseConverter
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -35,6 +39,10 @@ class Saksdata(
     @Column(name = "ytelse_id")
     @Convert(converter = YtelseConverter::class)
     var ytelse: Ytelse,
+    @Column(name = "dato_mottatt_klageinstans")
+    var mottattKlageinstans: LocalDate?,
+    @Column(name = "sak_i_trygderetten_opprettet")
+    var sakITrygderettenOpprettet: LocalDate?,
     @Column(name = "utfall_id")
     @Convert(converter = UtfallConverter::class)
     var utfall: Utfall? = null,
@@ -46,10 +54,19 @@ class Saksdata(
     @Convert(converter = RegistreringshjemmelConverter::class)
     @Column(name = "id")
     var registreringshjemler: Set<Registreringshjemmel>? = null,
+    @Column(name = "tilknyttet_enhet")
+    var tilknyttetEnhet: String?,
     @Column(name = "dato_saksdata_avsluttet_av_saksbehandler")
     var avsluttetAvSaksbehandler: LocalDateTime? = null,
+    @Column(name = "tilbakekreving")
+    var tilbakekreving: Boolean?,
     @Column(name = "created")
     val created: LocalDateTime = LocalDateTime.now(),
     @Column(name = "modified")
     var modified: LocalDateTime = created,
-)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "kvalitetsvurdering", columnDefinition = "jsonb")
+    var kvalitetsvurdering: Kvalitetsvurdering? = null,
+) {
+    fun isAvsluttetAvSaksbehandler() = avsluttetAvSaksbehandler != null
+}

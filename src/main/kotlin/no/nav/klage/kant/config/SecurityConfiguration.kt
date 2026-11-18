@@ -10,45 +10,35 @@ import org.springframework.http.HttpStatus
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.security.web.SecurityFilterChain
 
 @Configuration
 @EnableWebSecurity
 class SecurityConfiguration {
+    companion object {
+        val UNAUTHENTICATED_PATHS =
+            listOf(
+                "/internal/health",
+                "/internal/health/**",
+                "/internal/prometheus",
+            )
+    }
+
     @Bean
-    fun securityFilterChain(
-        http: HttpSecurity,
-        environment: Environment,
-    ): SecurityFilterChain =
+    fun securityFilterChain(http: HttpSecurity): SecurityFilterChain =
         http
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
                 it
-                    .requestMatchers(
-                        HttpMethod.GET,
-                        "/internal/health",
-                        "/internal/health/**",
-                        "/internal/prometheus",
-                    ).permitAll()
-                it.anyRequest().authenticated()
-            }.oauth2ResourceServer { resourceServer ->
-                resourceServer.jwt { it.decoder(azureJwtDecoder(AzureAuthProperties.from(environment))) }
-                resourceServer.authenticationEntryPoint { _, response, _ ->
-                    response.status = HttpStatus.UNAUTHORIZED.value()
-                    response.contentType = "application/problem+json"
-                    response.setHeader("WWW-Authenticate", "Bearer")
-                    response.writer.write(
-                        """{"type":"about:blank","title":"Unauthorized","status":401,""" +
-                            """"detail":"Authentication required"}""",
-                    )
-                }
-                resourceServer.accessDeniedHandler { _, response, _ ->
-                    response.status = HttpStatus.FORBIDDEN.value()
-                    response.contentType = "application/problem+json"
-                    response.writer.write(
-                        """{"type":"about:blank","title":"Forbidden","status":403,"detail":"Access denied"}""",
-                    )
-                }
-            }.build()
+                    .requestMatchers(*UNAUTHENTICATED_PATHS.toTypedArray())
+                    .permitAll()
+                    .anyRequest()
+                    .authenticated()
+            }.oauth2ResourceServer { it.jwt { } }
+            .build()
+
+    @Bean
+    fun jwtDecoder(environment: Environment): JwtDecoder = azureJwtDecoder(AzureAuthProperties.from(environment))
 }

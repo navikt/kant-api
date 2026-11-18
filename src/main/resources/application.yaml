@@ -4,6 +4,8 @@ spring:
   main:
     banner-mode: off
   jackson:
+    deserialization:
+      fail-on-unknown-properties: true
     datatype:
       enum:
         fail-on-numbers-for-enums: true
@@ -25,6 +27,8 @@ spring:
   jpa:
     open-in-view: false
     show-sql: false
+    properties:
+      hibernate.type.json_format_mapper: jackson3
     hibernate:
       ddl-auto: validate
   lifecycle:
