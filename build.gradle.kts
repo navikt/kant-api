@@ -59,10 +59,10 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
     testImplementation("no.nav.klage:klage-auth-test:$klageAuthVersion")
-    testImplementation(platform("org.testcontainers:testcontainers-bom:1.21.4"))
+    testImplementation(platform("org.testcontainers:testcontainers-bom:2.0.5"))
     testImplementation("org.testcontainers:postgresql")
     testImplementation("org.testcontainers:junit-jupiter")
-    testImplementation("io.kotest:kotest-assertions-core-jvm:5.9.1")
+    testImplementation("io.kotest:kotest-assertions-core-jvm:6.2.7")
 }
 
 ktlint {
