@@ -41,7 +41,7 @@ class SaksdataServiceTest {
     @EnumSource(value = Type::class, names = ["ANKE_ETTER_2027", "ANKE_I_TRYGDERETTEN_ETTER_2027"])
     fun `creates open saksdata with received date`(sakstype: Type) {
         `when`(repository.findByKabalReference(reference)).thenReturn(null)
-        `when`(repository.save(any(Saksdata::class.java))).thenAnswer { it.getArgument<Saksdata>(0) }
+        `when`(repository.saveAndFlush(any(Saksdata::class.java))).thenAnswer { it.getArgument<Saksdata>(0) }
 
         val response =
             service.create(

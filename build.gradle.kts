@@ -7,6 +7,7 @@ import org.springframework.boot.gradle.tasks.bundling.BootJar
 val ktlintVersion = "1.8.0"
 val klageAuthVersion = "0.4.0"
 val klageKodeverkVersion = "3.4.9"
+val logstashVersion = "9.0"
 
 plugins {
     val kotlinVersion = "2.4.21"
@@ -53,6 +54,7 @@ dependencies {
     implementation("io.micrometer:micrometer-registry-prometheus")
     implementation("no.nav.klage:klage-auth:$klageAuthVersion")
     implementation("no.nav.klage:klage-kodeverk:$klageKodeverkVersion")
+    implementation("net.logstash.logback:logstash-logback-encoder:$logstashVersion")
     runtimeOnly("org.postgresql:postgresql")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")

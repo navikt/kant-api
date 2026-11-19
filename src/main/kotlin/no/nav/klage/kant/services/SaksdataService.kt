@@ -34,7 +34,7 @@ class SaksdataService(
         val existingEntity = findSaksdataByKabalReference(id = input.kabalReference)
         if (existingEntity != null) return existingEntity.toResponse()
         return repository
-            .save(
+            .saveAndFlush(
                 Saksdata(
                     kabalReference = input.kabalReference,
                     sakstype = input.sakstype,

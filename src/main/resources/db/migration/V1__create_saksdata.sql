@@ -5,14 +5,17 @@ CREATE TABLE saksdata (
     ytelse_id TEXT,
     utfall_id TEXT,
     dato_saksdata_avsluttet_av_saksbehandler TIMESTAMP,
-    created TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    modified TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE registreringshjemmel (
     saksdata_id UUID NOT NULL REFERENCES saksdata(id) ON DELETE CASCADE,
     id TEXT NOT NULL,
-    PRIMARY KEY (saksdata_id, id)
+    PRIMARY KEY (saksdata_id, id),
+    CONSTRAINT fk_registreringshjemmel_saksdata
+        FOREIGN KEY (saksdata_id)
+            REFERENCES saksdata(id)
 );
 
 CREATE FUNCTION update_saksdata_modified()
