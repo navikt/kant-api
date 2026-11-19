@@ -65,7 +65,7 @@ spec:
         diskSize: 10
         diskAutoresize: true
         highAvailability: {{ db_ha }}
-        cascadingDelete: false
+        cascadingDelete: true
         autoBackupHour: 2
         maintenance:
           day: 1
