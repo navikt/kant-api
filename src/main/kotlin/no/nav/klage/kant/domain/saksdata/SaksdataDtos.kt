@@ -13,7 +13,6 @@ data class SaksdataRequest(
     val kabalReference: UUID,
     val sakstype: Type,
     val ytelse: Ytelse,
-    val mottattKlageinstans: LocalDate,
 )
 
 data class SaksdataUpdateRequest(
@@ -26,6 +25,7 @@ data class SaksdataAvslutningRequest(
     val registreringshjemler: Set<Registreringshjemmel>,
     val avsluttetAvSaksbehandler: LocalDateTime,
     val sakITrygderettenOpprettet: LocalDate? = null,
+    val mottattKlageinstans: LocalDate? = null,
     val tilknyttetEnhet: String,
     val tilbakekreving: Boolean,
 )

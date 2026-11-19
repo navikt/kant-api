@@ -39,7 +39,7 @@ class SaksdataService(
                     kabalReference = input.kabalReference,
                     sakstype = input.sakstype,
                     ytelse = input.ytelse,
-                    mottattKlageinstans = input.mottattKlageinstans,
+                    mottattKlageinstans = null,
                     sakITrygderettenOpprettet = null,
                     tilknyttetEnhet = null,
                     tilbakekreving = null,
@@ -83,15 +83,30 @@ class SaksdataService(
         request: SaksdataAvslutningRequest,
     ): SaksdataResponse {
         val entity = findForUpdate(id)
+
+        if (entity.isAvsluttetAvSaksbehandler()) return entity.toResponse()
+
         KvalitetsvurderingValidator.validate(
             sakstype = entity.sakstype,
             kvalitetsvurdering = entity.kvalitetsvurdering,
             registreringshjemler = request.registreringshjemler,
         )
+
+        if (entity.sakstype == Type.ANKE_ETTER_2027) {
+            if (request.mottattKlageinstans == null) {
+                throw SaksdataInvalidException("Krever mottattKlageinstans for å fullføre anke")
+            }
+        } else if (entity.sakstype == Type.ANKE_I_TRYGDERETTEN_ETTER_2027) {
+            if (request.sakITrygderettenOpprettet == null) {
+                throw SaksdataInvalidException("Krever sakITrygderettenOpprettet for å fullføre anke")
+            }
+        }
+
         entity.utfall = request.utfall
         entity.registreringshjemler = request.registreringshjemler.toMutableSet()
         entity.avsluttetAvSaksbehandler = request.avsluttetAvSaksbehandler
         entity.sakITrygderettenOpprettet = request.sakITrygderettenOpprettet
+        entity.mottattKlageinstans = request.mottattKlageinstans
         entity.tilknyttetEnhet = request.tilknyttetEnhet
         entity.tilbakekreving = request.tilbakekreving
         return repository.saveAndFlush(entity).toResponse()
@@ -112,6 +127,10 @@ class InvalidSakstypeException :
     RuntimeException(
         "Saksdata can only be created for ANKE_ETTER_2027 and ANKE_I_TRYGDERETTEN_ETTER_2027",
     )
+
+class SaksdataInvalidException(
+    message: String,
+) : RuntimeException(message)
 
 class InvalidKvalitetsvurderingTypeException : RuntimeException("Kvalitetsvurdering type does not match sakstype")
 

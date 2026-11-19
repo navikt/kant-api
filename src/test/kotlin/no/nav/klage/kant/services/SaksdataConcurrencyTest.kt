@@ -129,7 +129,6 @@ class SaksdataConcurrencyTest
                         kabalReference = UUID.randomUUID(),
                         sakstype = Type.ANKE_ETTER_2027,
                         ytelse = Ytelse.SYK_SYK,
-                        mottattKlageinstans = LocalDate.of(2026, 11, 1),
                     ),
                 )
             service.updateKvalitetsvurdering(id = created.id, request = completedAssessment)
@@ -163,6 +162,7 @@ class SaksdataConcurrencyTest
                 avsluttetAvSaksbehandler = LocalDateTime.of(2026, 11, 16, 12, 0),
                 tilknyttetEnhet = "4291",
                 tilbakekreving = false,
+                mottattKlageinstans = LocalDate.of(2026, 10, 16),
             )
 
         enum class Mutation {

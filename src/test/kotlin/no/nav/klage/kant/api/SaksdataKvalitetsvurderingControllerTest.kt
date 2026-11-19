@@ -180,6 +180,7 @@ class SaksdataKvalitetsvurderingControllerTest : AzureSecurityContractTest() {
                 "utfall" to Utfall.MEDHOLD,
                 "registreringshjemler" to setOf(Registreringshjemmel.FTRL_1_3),
                 "avsluttetAvSaksbehandler" to "2026-11-16T12:00:00",
+                "mottattKlageinstans" to "2026-10-16T12:00:00",
                 "tilknyttetEnhet" to "4291",
                 "tilbakekreving" to false,
             ),

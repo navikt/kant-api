@@ -56,7 +56,7 @@ spec:
         - application: kabal-frontend
           namespace: klage
           cluster: {{ cluster }}
-#  gcp:
+  gcp: null
 #    sqlInstances:
 #      - name: kant-api-priv
 #        type: POSTGRES_18

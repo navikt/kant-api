@@ -49,14 +49,13 @@ class SaksdataServiceTest {
                     kabalReference = reference,
                     sakstype = sakstype,
                     ytelse = Ytelse.SYK_SYK,
-                    mottattKlageinstans = mottatt,
                 ),
             )
 
         response.kabalReference shouldBe reference
         response.sakstype shouldBe sakstype
         response.ytelse shouldBe Ytelse.SYK_SYK
-        response.mottattKlageinstans shouldBe mottatt
+        response.mottattKlageinstans shouldBe null
         response.avsluttetAvSaksbehandler shouldBe null
         response.sakITrygderettenOpprettet shouldBe null
         response.tilknyttetEnhet shouldBe null
@@ -76,7 +75,6 @@ class SaksdataServiceTest {
                 kabalReference = reference,
                 sakstype = sakstype,
                 ytelse = Ytelse.SYK_SYK,
-                mottattKlageinstans = mottatt,
             )
 
         assertThrows<InvalidSakstypeException> { service.create(request) }
@@ -95,7 +93,6 @@ class SaksdataServiceTest {
                     kabalReference = reference,
                     sakstype = entity.sakstype,
                     ytelse = entity.ytelse,
-                    mottattKlageinstans = mottatt,
                 ),
             )
 
@@ -158,7 +155,7 @@ class SaksdataServiceTest {
             response.sakITrygderettenOpprettet shouldBe opprettet
             response.tilknyttetEnhet shouldBe request.tilknyttetEnhet
             response.tilbakekreving shouldBe false
-            response.mottattKlageinstans shouldBe mottatt
+            response.mottattKlageinstans shouldBe request.mottattKlageinstans
             verify(repository).findForUpdate(entity.id)
         }
     }
@@ -429,5 +426,6 @@ class SaksdataServiceTest {
             avsluttetAvSaksbehandler = LocalDateTime.of(2026, 11, 16, 12, 0),
             tilknyttetEnhet = "4291",
             tilbakekreving = false,
+            mottattKlageinstans = LocalDate.of(2026, 10, 16),
         )
 }
