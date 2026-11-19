@@ -7,7 +7,7 @@ on:
     inputs:
       e2e-tests:
         type: string
-        default: 'kabal'
+        default: 'none'
         description: 'Comma-separated list of e2e tests to run. Use "none" to skip all e2e tests.'
 
 jobs:

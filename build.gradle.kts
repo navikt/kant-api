@@ -142,5 +142,5 @@ tasks.withType<Test> {
 }
 
 tasks.named<BootJar>("bootJar") {
-    archiveFileName.set("kant-api.jar")
+    archiveFileName.set("app.jar")
 }
