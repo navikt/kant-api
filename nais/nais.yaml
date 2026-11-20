@@ -73,6 +73,12 @@ spec:
         databases:
           - name: kant-api
             envVarPrefix: DB
+  {{#if ingresses}}
+    ingresses:
+      {{#each ingresses as |ingress|}}
+         - {{ingress}}
+        {{/each}}
+  {{/if}}
   env:
     - name: JAVA_TOOL_OPTIONS
       value: "-XX:MaxRAMPercentage=70.0"
