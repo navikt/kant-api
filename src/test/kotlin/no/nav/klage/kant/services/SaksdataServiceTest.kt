@@ -5,6 +5,7 @@ import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeITRKvalitetsvurderingV1
 import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeKvalitetsvurderingV1
 import no.nav.klage.kant.domain.kvalitetsvurdering.Kvalitetsvurdering
 import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationException
+import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationError
 import no.nav.klage.kant.domain.saksdata.Saksdata
 import no.nav.klage.kant.domain.saksdata.SaksdataAvslutningRequest
 import no.nav.klage.kant.domain.saksdata.SaksdataRequest
@@ -113,6 +114,61 @@ class SaksdataServiceTest {
         assertThrows<SaksdataNotFoundException> {
             service.update(id = missingId, request = SaksdataUpdateRequest())
         }
+    }
+
+    @Test
+    fun `validation errors uses persisted assessment and does not modify saksdata`() {
+        val entity =
+            saksdata().apply {
+                kvalitetsvurdering = invalidDraft(Type.ANKE_ETTER_2027)
+            }
+        `when`(repository.findById(entity.id)).thenReturn(Optional.of(entity))
+        val before = entity.toResponse()
+
+        service.getValidationErrors(entity.id) shouldBe
+            listOf(
+                KvalitetsvurderingValidationError(
+                    field = "kvalitetsvurdering.omgjortIKlageomgangen.vedtaketBurdeVaertOmgjortIKlageomgangen",
+                    message = "Må besvares før fullføring",
+                ),
+                KvalitetsvurderingValidationError(
+                    field = "kvalitetsvurdering.omgjortIKlageomgangen.feilILovtolkningen.registreringshjemler",
+                    message = "Må velge minst en registreringshjemmel",
+                ),
+            )
+
+        entity.toResponse() shouldBe before
+        verify(repository).findById(entity.id)
+        verify(repository, never()).findForUpdate(entity.id)
+        verify(repository, never()).save(any(Saksdata::class.java))
+        verify(repository, never()).saveAndFlush(any(Saksdata::class.java))
+    }
+
+    @Test
+    fun `validation errors accepts completed saksdata and returns empty list`() {
+        val entity =
+            saksdata().apply {
+                kvalitetsvurdering = validAnkeAssessment()
+                avsluttetAvSaksbehandler = LocalDateTime.of(2026, 11, 16, 12, 0)
+            }
+        `when`(repository.findById(entity.id)).thenReturn(Optional.of(entity))
+        val before = entity.toResponse()
+
+        service.getValidationErrors(entity.id) shouldBe emptyList()
+
+        entity.toResponse() shouldBe before
+        verify(repository).findById(entity.id)
+        verify(repository, never()).findForUpdate(entity.id)
+        verify(repository, never()).save(any(Saksdata::class.java))
+        verify(repository, never()).saveAndFlush(any(Saksdata::class.java))
+    }
+
+    @Test
+    fun `validation errors rejects missing saksdata`() {
+        val missingId = UUID.randomUUID()
+        `when`(repository.findById(missingId)).thenReturn(Optional.empty())
+
+        assertThrows<SaksdataNotFoundException> { service.getValidationErrors(missingId) }
     }
 
     @Test

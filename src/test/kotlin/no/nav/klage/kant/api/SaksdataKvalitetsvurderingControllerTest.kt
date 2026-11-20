@@ -26,12 +26,14 @@ import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.Optional
 import java.util.UUID
 
 @WebMvcTest(SaksdataController::class)
@@ -142,6 +144,50 @@ class SaksdataKvalitetsvurderingControllerTest : AzureSecurityContractTest() {
 
         verify(repository).saveAndFlush(any(Saksdata::class.java))
     }
+
+    @Test
+    fun `validation errors returns invalid assessment errors without finalizing`() {
+        val entity = prepareEntity(Type.ANKE_ETTER_2027)
+        `when`(repository.findById(id)).thenReturn(Optional.of(entity))
+
+        mockMvc
+            .perform(authorizedGetValidationErrors())
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(
+                jsonPath("$[0].field")
+                    .value("kvalitetsvurdering.omgjortIKlageomgangen.vedtaketBurdeVaertOmgjortIKlageomgangen"),
+            ).andExpect(jsonPath("$[0].message").value("Må besvares før fullføring"))
+
+        verify(repository, never()).saveAndFlush(any(Saksdata::class.java))
+        verify(repository, never()).findForUpdate(id)
+    }
+
+    @Test
+    fun `validation errors returns empty list for valid assessment`() {
+        val entity = prepareEntity(Type.ANKE_ETTER_2027).apply {
+            kvalitetsvurdering =
+                AnkeKvalitetsvurderingV1(
+                    omgjortIKlageomgangen =
+                        AnkeKvalitetsvurderingV1.OmgjortIKlageomgangen(
+                            vedtaketBurdeVaertOmgjortIKlageomgangen = false,
+                        ),
+                )
+        }
+        `when`(repository.findById(id)).thenReturn(Optional.of(entity))
+
+        mockMvc
+            .perform(authorizedGetValidationErrors())
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(0))
+
+        verify(repository, never()).saveAndFlush(any(Saksdata::class.java))
+        verify(repository, never()).findForUpdate(id)
+    }
+
+    private fun authorizedGetValidationErrors(): MockHttpServletRequestBuilder =
+        get("/api/saksdata/$id/validationErrors")
+            .header("Authorization", "Bearer ${mockAzure.token()}")
 
     private fun authorizedPut(body: String): MockHttpServletRequestBuilder =
         put("/api/saksdata/$id/kvalitetsvurdering")

@@ -2,6 +2,7 @@ package no.nav.klage.kant.api
 
 import jakarta.validation.Valid
 import no.nav.klage.kant.domain.kvalitetsvurdering.Kvalitetsvurdering
+import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationError
 import no.nav.klage.kant.domain.saksdata.SaksdataAvslutningRequest
 import no.nav.klage.kant.domain.saksdata.SaksdataRequest
 import no.nav.klage.kant.domain.saksdata.SaksdataResponse
@@ -50,4 +51,9 @@ class SaksdataController(
         @PathVariable id: UUID,
         @Valid @RequestBody request: SaksdataAvslutningRequest,
     ): SaksdataResponse = saksdataService.finalize(id = id, request = request)
+
+    @GetMapping("/{id}/validationErrors")
+    fun validate(
+        @PathVariable id: UUID,
+    ): List<KvalitetsvurderingValidationError> = saksdataService.getValidationErrors(id)
 }
