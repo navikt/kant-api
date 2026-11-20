@@ -5,9 +5,17 @@ CREATE TABLE saksdata (
     ytelse_id TEXT,
     utfall_id TEXT,
     dato_saksdata_avsluttet_av_saksbehandler TIMESTAMP,
+    dato_mottatt_klageinstans DATE,
+    sak_i_trygderetten_opprettet DATE,
+    tilknyttet_enhet TEXT,
+    tilbakekreving BOOLEAN,
+    kvalitetsvurdering JSONB,
     created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     modified TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE saksdata
+    ADD CONSTRAINT saksdata_kabal_reference_unique UNIQUE (kabal_reference);
 
 CREATE TABLE registreringshjemmel (
     saksdata_id UUID NOT NULL REFERENCES saksdata(id) ON DELETE CASCADE,

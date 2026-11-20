@@ -56,23 +56,23 @@ spec:
         - application: kabal-frontend
           namespace: klage
           cluster: {{ cluster }}
-  gcp: null
-#    sqlInstances:
-#      - name: kant-api-priv
-#        type: POSTGRES_18
-#        tier: {{ db_tier }}
-#        diskType: SSD
-#        diskSize: 10
-#        diskAutoresize: true
-#        highAvailability: {{ db_ha }}
-#        cascadingDelete: true
-#        autoBackupHour: 2
-#        maintenance:
-#          day: 1
-#          hour: 4
-#        databases:
-#          - name: kant-api
-#            envVarPrefix: DB
+  gcp:
+    sqlInstances:
+      - name: kant-api-priv
+        type: POSTGRES_18
+        tier: {{ db_tier }}
+        diskType: SSD
+        diskSize: 10
+        diskAutoresize: true
+        highAvailability: {{ db_ha }}
+        cascadingDelete: true
+        autoBackupHour: 2
+        maintenance:
+          day: 1
+          hour: 4
+        databases:
+          - name: kant-api
+            envVarPrefix: DB
   env:
     - name: JAVA_TOOL_OPTIONS
       value: "-XX:MaxRAMPercentage=70.0"
