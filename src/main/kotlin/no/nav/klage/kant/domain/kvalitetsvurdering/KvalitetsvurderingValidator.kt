@@ -204,6 +204,10 @@ object KvalitetsvurderingValidator {
         )
 }
 
+data class KvalitetsvurderingValidationErrors(
+    val validationErrors: List<KvalitetsvurderingValidationError>,
+)
+
 data class KvalitetsvurderingValidationError(
     val field: String,
     val message: String,

@@ -4,8 +4,9 @@ import io.kotest.matchers.shouldBe
 import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeITRKvalitetsvurderingV1
 import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeKvalitetsvurderingV1
 import no.nav.klage.kant.domain.kvalitetsvurdering.Kvalitetsvurdering
-import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationException
 import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationError
+import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationErrors
+import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationException
 import no.nav.klage.kant.domain.saksdata.Saksdata
 import no.nav.klage.kant.domain.saksdata.SaksdataAvslutningRequest
 import no.nav.klage.kant.domain.saksdata.SaksdataRequest
@@ -126,15 +127,18 @@ class SaksdataServiceTest {
         val before = entity.toResponse()
 
         service.getValidationErrors(entity.id) shouldBe
-            listOf(
-                KvalitetsvurderingValidationError(
-                    field = "kvalitetsvurdering.omgjortIKlageomgangen.vedtaketBurdeVaertOmgjortIKlageomgangen",
-                    message = "Må besvares før fullføring",
-                ),
-                KvalitetsvurderingValidationError(
-                    field = "kvalitetsvurdering.omgjortIKlageomgangen.feilILovtolkningen.registreringshjemler",
-                    message = "Må velge minst en registreringshjemmel",
-                ),
+            KvalitetsvurderingValidationErrors(
+                validationErrors =
+                    listOf(
+                        KvalitetsvurderingValidationError(
+                            field = "kvalitetsvurdering.omgjortIKlageomgangen.vedtaketBurdeVaertOmgjortIKlageomgangen",
+                            message = "Må besvares før fullføring",
+                        ),
+                        KvalitetsvurderingValidationError(
+                            field = "kvalitetsvurdering.omgjortIKlageomgangen.feilILovtolkningen.registreringshjemler",
+                            message = "Må velge minst en registreringshjemmel",
+                        ),
+                    ),
             )
 
         entity.toResponse() shouldBe before
@@ -154,7 +158,10 @@ class SaksdataServiceTest {
         `when`(repository.findById(entity.id)).thenReturn(Optional.of(entity))
         val before = entity.toResponse()
 
-        service.getValidationErrors(entity.id) shouldBe emptyList()
+        service.getValidationErrors(entity.id) shouldBe
+            KvalitetsvurderingValidationErrors(
+                validationErrors = emptyList(),
+            )
 
         entity.toResponse() shouldBe before
         verify(repository).findById(entity.id)

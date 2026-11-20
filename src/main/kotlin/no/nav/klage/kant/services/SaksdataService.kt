@@ -4,6 +4,7 @@ import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeITRKvalitetsvurderingV1
 import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeKvalitetsvurderingV1
 import no.nav.klage.kant.domain.kvalitetsvurdering.Kvalitetsvurdering
 import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationError
+import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationErrors
 import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationException
 import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidator
 import no.nav.klage.kant.domain.saksdata.Saksdata
@@ -17,6 +18,7 @@ import no.nav.klage.kodeverk.Type
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
+import kotlin.collections.emptyList
 
 @Service
 @Transactional(readOnly = true)
@@ -25,18 +27,21 @@ class SaksdataService(
 ) {
     fun get(id: UUID): SaksdataResponse = findSaksdataOrThrowError(id).toResponse()
 
-    fun getValidationErrors(id: UUID): List<KvalitetsvurderingValidationError> {
+    fun getValidationErrors(id: UUID): KvalitetsvurderingValidationErrors {
         val entity = findSaksdataOrThrowError(id)
-        return try {
-            KvalitetsvurderingValidator.validate(
-                sakstype = entity.sakstype,
-                kvalitetsvurdering = entity.kvalitetsvurdering,
-                registreringshjemler = entity.registreringshjemler.orEmpty(),
-            )
-            emptyList()
-        } catch (exception: KvalitetsvurderingValidationException) {
-            exception.errors
-        }
+        return KvalitetsvurderingValidationErrors(
+            validationErrors =
+                try {
+                    KvalitetsvurderingValidator.validate(
+                        sakstype = entity.sakstype,
+                        kvalitetsvurdering = entity.kvalitetsvurdering,
+                        registreringshjemler = entity.registreringshjemler.orEmpty(),
+                    )
+                    emptyList()
+                } catch (exception: KvalitetsvurderingValidationException) {
+                    exception.errors
+                },
+        )
     }
 
     @Transactional
