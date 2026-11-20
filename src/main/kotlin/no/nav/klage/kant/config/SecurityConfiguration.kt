@@ -22,6 +22,9 @@ class SecurityConfiguration {
                 "/internal/health",
                 "/internal/health/**",
                 "/internal/prometheus",
+                // Swagger is only enabled in dev (application-dev.yaml). In prod these paths give 404.
+                "/swagger-ui.html",
+                "/swagger-ui/**",
             )
     }
 

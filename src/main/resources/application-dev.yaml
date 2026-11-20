@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 5
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
