@@ -76,3 +76,5 @@ spec:
   env:
     - name: JAVA_TOOL_OPTIONS
       value: "-XX:MaxRAMPercentage=70.0"
+    - name: SPRING_PROFILES_ACTIVE
+      value: {{springProfile}}

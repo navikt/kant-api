@@ -1,6 +1,6 @@
 ingresses:
   - https://kant-api.intern.dev.nav.no
-
+springProfile: dev
 cluster: dev-gcp
 tenant: trygdeetaten.no
 replicas: 1
