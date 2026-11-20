@@ -132,11 +132,11 @@ class SaksdataServiceTest {
                     listOf(
                         KvalitetsvurderingValidationError(
                             field = "kvalitetsvurdering.omgjortIKlageomgangen.vedtaketBurdeVaertOmgjortIKlageomgangen",
-                            message = "Må besvares før fullføring",
+                            reason = "Må besvares før fullføring",
                         ),
                         KvalitetsvurderingValidationError(
                             field = "kvalitetsvurdering.omgjortIKlageomgangen.feilILovtolkningen.registreringshjemler",
-                            message = "Må velge minst en registreringshjemmel",
+                            reason = "Må velge minst en registreringshjemmel",
                         ),
                     ),
             )

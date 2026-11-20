@@ -32,7 +32,7 @@ object KvalitetsvurderingValidator {
                         add(
                             KvalitetsvurderingValidationError(
                                 field = "kvalitetsvurdering",
-                                message = "Må fylles ut før fullføring",
+                                reason = "Må fylles ut før fullføring",
                             ),
                         )
                     }
@@ -160,9 +160,9 @@ object KvalitetsvurderingValidator {
         if (answer == null) {
             requireAnswer(field = field, value = answer)
         } else if (answer && selected.none { it }) {
-            add(KvalitetsvurderingValidationError(field = field, message = "Minst en grunn må velges"))
+            add(KvalitetsvurderingValidationError(field = field, reason = "Minst en grunn må velges"))
         } else if (!answer && selected.any { it }) {
-            add(KvalitetsvurderingValidationError(field = field, message = "Ingen grunner kan velges"))
+            add(KvalitetsvurderingValidationError(field = field, reason = "Ingen grunner kan velges"))
         }
     }
 
@@ -176,15 +176,15 @@ object KvalitetsvurderingValidator {
             add(
                 KvalitetsvurderingValidationError(
                     field = field,
-                    message = "Må velge minst en registreringshjemmel",
+                    reason = "Må velge minst en registreringshjemmel",
                 ),
             )
         }
         if (!selected && hjemler.isNotEmpty()) {
-            add(KvalitetsvurderingValidationError(field = field, message = "Må være tom"))
+            add(KvalitetsvurderingValidationError(field = field, reason = "Må være tom"))
         }
         if (hjemler.any { it !in allowedHjemler }) {
-            add(KvalitetsvurderingValidationError(field = field, message = "Kan kun inneholde registreringshjemler fra saken"))
+            add(KvalitetsvurderingValidationError(field = field, reason = "Kan kun inneholde registreringshjemler fra saken"))
         }
     }
 
@@ -193,14 +193,14 @@ object KvalitetsvurderingValidator {
         value: Any?,
     ) {
         if (value == null) {
-            add(KvalitetsvurderingValidationError(field = field, message = "Må besvares før fullføring"))
+            add(KvalitetsvurderingValidationError(field = field, reason = "Må besvares før fullføring"))
         }
     }
 
     private fun typeMismatch() =
         KvalitetsvurderingValidationError(
             field = "kvalitetsvurdering",
-            message = "Kvalitetsvurderingstype samsvarer ikke med sakstype",
+            reason = "Kvalitetsvurderingstype samsvarer ikke med sakstype",
         )
 }
 
@@ -210,7 +210,7 @@ data class KvalitetsvurderingValidationErrors(
 
 data class KvalitetsvurderingValidationError(
     val field: String,
-    val message: String,
+    val reason: String,
 )
 
 class KvalitetsvurderingValidationException(
