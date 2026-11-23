@@ -54,11 +54,10 @@ management:
           include: livenessState
         readiness:
           include: readinessState,db
-  endpoints:
-    web:
-      base-path: /internal
-      exposure:
-        include: health,prometheus
+  endpoints.web:
+    exposure:
+      include: info, health, metrics, prometheus
+    base-path: "/internal"
   metrics:
     tags:
       application: ${spring.application.name}
@@ -66,15 +65,3 @@ management:
     metrics:
       export:
         enabled: true
-
-logging:
-  structured:
-    format:
-      console: logstash
-  level:
-    org.hibernate.SQL: OFF
-    org.hibernate.orm.jdbc.bind: OFF
-    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
-    org.hibernate.orm.jdbc.error: OFF
-    org.springframework.web: INFO
-    org.springframework.security: INFO

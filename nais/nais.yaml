@@ -56,6 +56,10 @@ spec:
         - application: kabal-frontend
           namespace: klage
           cluster: {{ cluster }}
+    outbound:
+      rules:
+        - application: logging
+          namespace: nais-system
   gcp:
     sqlInstances:
       - name: kant-api-priv
