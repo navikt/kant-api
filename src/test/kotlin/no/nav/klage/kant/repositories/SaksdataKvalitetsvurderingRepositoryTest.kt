@@ -2,6 +2,7 @@ package no.nav.klage.kant.repositories
 
 import io.kotest.matchers.shouldBe
 import jakarta.persistence.EntityManager
+import no.nav.klage.kant.config.RegistreringshjemmelJsonConfiguration
 import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeITRKvalitetsvurderingV1
 import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeITRKvalitetsvurderingV1Response
 import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeKvalitetsvurderingV1
@@ -18,6 +19,7 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase
+import org.springframework.context.annotation.Import
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.PostgreSQLContainer
@@ -30,6 +32,7 @@ import java.util.UUID
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ImportAutoConfiguration(FlywayAutoConfiguration::class)
+@Import(RegistreringshjemmelJsonConfiguration::class)
 @Testcontainers
 class SaksdataKvalitetsvurderingRepositoryTest
     @Autowired
@@ -92,6 +95,7 @@ class SaksdataKvalitetsvurderingRepositoryTest
             reloadedAnke.kvalitetsvurdering shouldBe ankeAssessment
             reloadedItr.kvalitetsvurdering shouldBe itrAssessment
             reloadedInterim.kvalitetsvurdering shouldBe null
+            assertJsonbRegistreringshjemmel(id = anke.id, expectedName = "FTRL_1_3")
             assertColumn(id = anke.id, expectedType = "ANKE_V1")
             assertColumn(id = itr.id, expectedType = "ANKE_ITR_V1")
             assertColumn(id = interim.id, expectedType = null)
@@ -151,6 +155,22 @@ class SaksdataKvalitetsvurderingRepositoryTest
                     ).setParameter("id", id)
                     .singleResult
             discriminator shouldBe expectedType
+        }
+
+        private fun assertJsonbRegistreringshjemmel(
+            id: UUID,
+            expectedName: String,
+        ) {
+            val storedId =
+                entityManager
+                    .createNativeQuery(
+                        """
+                        select kvalitetsvurdering #>> '{omgjortIKlageomgangen,feilILovtolkningen,registreringshjemler,0}'
+                        from saksdata where id = :id
+                        """.trimIndent(),
+                    ).setParameter("id", id)
+                    .singleResult
+            storedId shouldBe expectedName
         }
 
         private fun saksdata(
