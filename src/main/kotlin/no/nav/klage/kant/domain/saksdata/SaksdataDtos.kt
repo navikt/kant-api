@@ -1,6 +1,7 @@
 package no.nav.klage.kant.domain.saksdata
 
-import no.nav.klage.kant.domain.kvalitetsvurdering.Kvalitetsvurdering
+import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingResponse
+import no.nav.klage.kant.domain.kvalitetsvurdering.toKvalitetsvurderingResponse
 import no.nav.klage.kodeverk.Type
 import no.nav.klage.kodeverk.Utfall
 import no.nav.klage.kodeverk.hjemmel.Registreringshjemmel
@@ -14,11 +15,6 @@ data class SaksdataRequest(
     val sakstype: Type,
     val ytelse: Ytelse,
     val trygderettenSaksnummer: String,
-)
-
-data class SaksdataUpdateRequest(
-    val utfall: Utfall? = null,
-    val registreringshjemler: Set<Registreringshjemmel> = emptySet(),
 )
 
 data class SaksdataAvslutningRequest(
@@ -43,7 +39,7 @@ data class SaksdataResponse(
     val utfall: Utfall?,
     val registreringshjemler: Set<Registreringshjemmel>,
     val avsluttetAvSaksbehandler: LocalDateTime?,
-    val kvalitetsvurdering: Kvalitetsvurdering? = null,
+    val kvalitetsvurdering: KvalitetsvurderingResponse? = null,
     val trygderettenSaksnummer: String,
 )
 
@@ -60,6 +56,6 @@ fun Saksdata.toResponse(): SaksdataResponse =
         utfall = utfall,
         registreringshjemler = registreringshjemler.orEmpty(),
         avsluttetAvSaksbehandler = avsluttetAvSaksbehandler,
-        kvalitetsvurdering = kvalitetsvurdering,
+        kvalitetsvurdering = toKvalitetsvurderingResponse(),
         trygderettenSaksnummer = trygderettenSaksnummer,
     )

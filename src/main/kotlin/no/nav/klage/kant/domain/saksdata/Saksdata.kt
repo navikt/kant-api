@@ -18,7 +18,9 @@ import no.nav.klage.kodeverk.hjemmel.Registreringshjemmel
 import no.nav.klage.kodeverk.hjemmel.RegistreringshjemmelConverter
 import no.nav.klage.kodeverk.ytelse.Ytelse
 import no.nav.klage.kodeverk.ytelse.YtelseConverter
+import org.hibernate.annotations.Generated
 import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.generator.EventType
 import org.hibernate.type.SqlTypes
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -62,7 +64,8 @@ class Saksdata(
     var tilbakekreving: Boolean?,
     @Column(name = "created")
     val created: LocalDateTime = LocalDateTime.now(),
-    @Column(name = "modified")
+    @Generated(event = [EventType.UPDATE])
+    @Column(name = "modified", updatable = false)
     var modified: LocalDateTime = created,
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "kvalitetsvurdering", columnDefinition = "jsonb")

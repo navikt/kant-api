@@ -3,9 +3,11 @@ package no.nav.klage.kant.services
 import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeITRKvalitetsvurderingV1
 import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeKvalitetsvurderingV1
 import no.nav.klage.kant.domain.kvalitetsvurdering.Kvalitetsvurdering
+import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingResponse
 import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationErrors
 import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationException
 import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidator
+import no.nav.klage.kant.domain.kvalitetsvurdering.toKvalitetsvurderingResponse
 import no.nav.klage.kant.domain.saksdata.Saksdata
 import no.nav.klage.kant.domain.saksdata.SaksdataAvslutningRequest
 import no.nav.klage.kant.domain.saksdata.SaksdataRequest
@@ -133,7 +135,7 @@ class SaksdataService(
         return entity
     }
 
-    fun getKvalitetsvurdering(id: UUID): Kvalitetsvurdering? = findSaksdataOrThrowError(id).kvalitetsvurdering
+    fun getKvalitetsvurdering(id: UUID): KvalitetsvurderingResponse? = findSaksdataOrThrowError(id).toKvalitetsvurderingResponse()
 }
 
 class InvalidSakstypeException :

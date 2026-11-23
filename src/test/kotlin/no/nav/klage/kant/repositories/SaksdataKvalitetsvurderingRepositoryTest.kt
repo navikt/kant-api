@@ -3,8 +3,11 @@ package no.nav.klage.kant.repositories
 import io.kotest.matchers.shouldBe
 import jakarta.persistence.EntityManager
 import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeITRKvalitetsvurderingV1
+import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeITRKvalitetsvurderingV1Response
 import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeKvalitetsvurderingV1
+import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeKvalitetsvurderingV1Response
 import no.nav.klage.kant.domain.kvalitetsvurdering.Kvalitetsvurdering
+import no.nav.klage.kant.domain.kvalitetsvurdering.toKvalitetsvurderingResponse
 import no.nav.klage.kant.domain.saksdata.Saksdata
 import no.nav.klage.kodeverk.Type
 import no.nav.klage.kodeverk.hjemmel.Registreringshjemmel
@@ -21,6 +24,7 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.UUID
 
 @DataJpaTest
@@ -93,7 +97,36 @@ class SaksdataKvalitetsvurderingRepositoryTest
             assertColumn(id = interim.id, expectedType = null)
 
             reloadedAnke.kvalitetsvurdering = AnkeKvalitetsvurderingV1()
-            repository.saveAndFlush(reloadedAnke)
+            val updatedAnke = repository.saveAndFlush(reloadedAnke)
+            val databaseModified =
+                entityManager
+                    .createNativeQuery("select modified from saksdata where id = :id")
+                    .setParameter("id", anke.id)
+                    .singleResult as LocalDateTime
+
+            updatedAnke.created shouldBe createdTimestamp
+            updatedAnke.modified shouldBe databaseModified
+            databaseModified.isAfter(createdTimestamp) shouldBe true
+            val responseModified =
+                when (val response = updatedAnke.toKvalitetsvurderingResponse()) {
+                    is AnkeKvalitetsvurderingV1Response -> response.modified
+                    is AnkeITRKvalitetsvurderingV1Response -> response.modified
+                    null -> null
+                }
+            responseModified shouldBe databaseModified
+
+            val timestampKeysPresent =
+                entityManager
+                    .createNativeQuery(
+                        """
+                        select jsonb_exists(kvalitetsvurdering, 'created')
+                            or jsonb_exists(kvalitetsvurdering, 'modified')
+                        from saksdata where id = :id
+                        """.trimIndent(),
+                    ).setParameter("id", anke.id)
+                    .singleResult as Boolean
+            timestampKeysPresent shouldBe false
+
             entityManager.clear()
             repository.findById(anke.id).orElseThrow().kvalitetsvurdering shouldBe AnkeKvalitetsvurderingV1()
             assertColumn(id = anke.id, expectedType = "ANKE_V1")
@@ -131,11 +164,15 @@ class SaksdataKvalitetsvurderingRepositoryTest
             sakITrygderettenOpprettet = null,
             tilknyttetEnhet = null,
             tilbakekreving = null,
+            created = createdTimestamp,
+            modified = createdTimestamp,
             kvalitetsvurdering = kvalitetsvurdering,
             trygderettenSaksnummer = "1234",
         )
 
         companion object {
+            private val createdTimestamp = LocalDateTime.of(2020, 1, 1, 0, 0)
+
             @Container
             @JvmStatic
             val postgres = PostgreSQLContainer<Nothing>("postgres:16-alpine")

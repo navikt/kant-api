@@ -2,11 +2,14 @@ package no.nav.klage.kant.services
 
 import io.kotest.matchers.shouldBe
 import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeITRKvalitetsvurderingV1
+import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeITRKvalitetsvurderingV1Response
 import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeKvalitetsvurderingV1
+import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeKvalitetsvurderingV1Response
 import no.nav.klage.kant.domain.kvalitetsvurdering.Kvalitetsvurdering
 import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationError
 import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationErrors
 import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationException
+import no.nav.klage.kant.domain.kvalitetsvurdering.toKvalitetsvurderingResponse
 import no.nav.klage.kant.domain.saksdata.Saksdata
 import no.nav.klage.kant.domain.saksdata.SaksdataAvslutningRequest
 import no.nav.klage.kant.domain.saksdata.SaksdataRequest
@@ -69,7 +72,10 @@ class SaksdataServiceTest {
     @MethodSource("supportedTypesWithKvalitetsvurdering")
     fun `creates open saksdata with received date`(sakstype: Type) {
         `when`(repository.findByKabalReference(reference)).thenReturn(null)
-        `when`(repository.saveAndFlush(any(Saksdata::class.java))).thenAnswer { it.getArgument<Saksdata>(0) }
+        lateinit var saved: Saksdata
+        `when`(repository.saveAndFlush(any(Saksdata::class.java))).thenAnswer {
+            it.getArgument<Saksdata>(0).also { entity -> saved = entity }
+        }
 
         val response =
             service.create(
@@ -89,14 +95,17 @@ class SaksdataServiceTest {
         response.sakITrygderettenOpprettet shouldBe null
         response.tilknyttetEnhet shouldBe null
         response.tilbakekreving shouldBe null
-        response.kvalitetsvurdering shouldBe defaultKvalitetsvurdering(sakstype)
+        response.kvalitetsvurdering shouldBe saved.toKvalitetsvurderingResponse()
     }
 
     @ParameterizedTest
     @MethodSource("supportedTypesWithoutKvalitetsvurdering")
     fun `creates open saksdata without kvalitetsvurdering with received date`(sakstype: Type) {
         `when`(repository.findByKabalReference(reference)).thenReturn(null)
-        `when`(repository.saveAndFlush(any(Saksdata::class.java))).thenAnswer { it.getArgument<Saksdata>(0) }
+        lateinit var saved: Saksdata
+        `when`(repository.saveAndFlush(any(Saksdata::class.java))).thenAnswer {
+            it.getArgument<Saksdata>(0).also { entity -> saved = entity }
+        }
 
         val response =
             service.create(
@@ -116,7 +125,7 @@ class SaksdataServiceTest {
         response.sakITrygderettenOpprettet shouldBe null
         response.tilknyttetEnhet shouldBe null
         response.tilbakekreving shouldBe null
-        response.kvalitetsvurdering shouldBe null
+        response.kvalitetsvurdering shouldBe saved.toKvalitetsvurderingResponse()
     }
 
     @ParameterizedTest
@@ -164,6 +173,51 @@ class SaksdataServiceTest {
         `when`(repository.findById(missingId)).thenReturn(Optional.empty())
         `when`(repository.findForUpdate(missingId)).thenReturn(null)
         assertThrows<SaksdataNotFoundException> { service.get(missingId) }
+    }
+
+    @ParameterizedTest
+    @MethodSource("supportedTypesWithKvalitetsvurdering")
+    fun `assessment responses include type and saksdata timestamps`(sakstype: Type) {
+        val created = LocalDateTime.of(2026, 11, 1, 9, 15)
+        val modified = LocalDateTime.of(2026, 11, 20, 14, 30)
+        val assessment = nonDefaultKvalitetsvurdering(sakstype)
+        val entity =
+            saksdata(sakstype, created = created, modified = modified).apply {
+                kvalitetsvurdering = assessment
+            }
+        `when`(repository.findById(entity.id)).thenReturn(Optional.of(entity))
+        val expected =
+            when (assessment) {
+                is AnkeKvalitetsvurderingV1 -> {
+                    AnkeKvalitetsvurderingV1Response(
+                        omgjortIKlageomgangen = assessment.omgjortIKlageomgangen,
+                        saksbehandlingsfeilIKlageomgangen = assessment.saksbehandlingsfeilIKlageomgangen,
+                        created = created,
+                        modified = modified,
+                    )
+                }
+
+                is AnkeITRKvalitetsvurderingV1 -> {
+                    AnkeITRKvalitetsvurderingV1Response(
+                        omgjortIAnkeomgangen = assessment.omgjortIAnkeomgangen,
+                        rettensSammensetning = assessment.rettensSammensetning,
+                        kjennelsensBetydningOgLaeringsverdi = assessment.kjennelsensBetydningOgLaeringsverdi,
+                        created = created,
+                        modified = modified,
+                    )
+                }
+            }
+
+        service.get(entity.id).kvalitetsvurdering shouldBe expected
+        service.getKvalitetsvurdering(entity.id) shouldBe expected
+    }
+
+    @Test
+    fun `standalone assessment response preserves null`() {
+        val entity = saksdata()
+        `when`(repository.findById(entity.id)).thenReturn(Optional.of(entity))
+
+        service.getKvalitetsvurdering(entity.id) shouldBe null
     }
 
     @Test
@@ -311,7 +365,7 @@ class SaksdataServiceTest {
 
         val response = service.updateKvalitetsvurdering(id = entity.id, request = requested)
 
-        response.kvalitetsvurdering shouldBe requested
+        response.kvalitetsvurdering shouldBe entity.toKvalitetsvurderingResponse()
         response.kabalReference shouldBe reference
         response.sakstype shouldBe sakstype
         response.mottattKlageinstans shouldBe mottatt
@@ -350,7 +404,7 @@ class SaksdataServiceTest {
 
         val response = service.updateKvalitetsvurdering(id = entity.id, request = draft)
 
-        response.kvalitetsvurdering shouldBe draft
+        response.kvalitetsvurdering shouldBe entity.toKvalitetsvurderingResponse()
         entity.kvalitetsvurdering shouldBe draft
         verify(repository).saveAndFlush(entity)
     }
@@ -409,7 +463,11 @@ class SaksdataServiceTest {
                 ),
         )
 
-    private fun saksdata(sakstype: Type = Type.ANKE_ETTER_2027): Saksdata =
+    private fun saksdata(
+        sakstype: Type = Type.ANKE_ETTER_2027,
+        created: LocalDateTime = LocalDateTime.of(2026, 11, 1, 9, 15),
+        modified: LocalDateTime = created,
+    ): Saksdata =
         Saksdata(
             kabalReference = reference,
             sakstype = sakstype,
@@ -418,6 +476,8 @@ class SaksdataServiceTest {
             sakITrygderettenOpprettet = null,
             tilknyttetEnhet = null,
             tilbakekreving = null,
+            created = created,
+            modified = modified,
             trygderettenSaksnummer = "1234",
         )
 

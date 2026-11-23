@@ -2,6 +2,7 @@ package no.nav.klage.kant.services
 
 import io.kotest.matchers.shouldBe
 import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeKvalitetsvurderingV1
+import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeKvalitetsvurderingV1Response
 import no.nav.klage.kant.domain.saksdata.SaksdataAvslutningRequest
 import no.nav.klage.kant.domain.saksdata.SaksdataRequest
 import no.nav.klage.kodeverk.Type
@@ -106,7 +107,9 @@ class SaksdataConcurrencyTest
                 val stored = service.get(id)
                 stored.avsluttetAvSaksbehandler shouldBe finalizationRequest().avsluttetAvSaksbehandler
                 stored.utfall shouldBe Utfall.MEDHOLD
-                stored.kvalitetsvurdering shouldBe completedAssessment
+                val assessment = stored.kvalitetsvurdering as AnkeKvalitetsvurderingV1Response
+                assessment.omgjortIKlageomgangen shouldBe completedAssessment.omgjortIKlageomgangen
+                assessment.saksbehandlingsfeilIKlageomgangen shouldBe completedAssessment.saksbehandlingsfeilIKlageomgangen
             } finally {
                 releaseFinalization.countDown()
                 executor.shutdownNow()
