@@ -23,7 +23,7 @@ data class SaksdataUpdateRequest(
 
 data class SaksdataAvslutningRequest(
     val utfall: Utfall,
-    val registreringshjemler: Set<Registreringshjemmel>,
+    val registreringshjemmelIdList: Set<String>,
     val avsluttetAvSaksbehandler: LocalDateTime,
     val sakITrygderettenOpprettet: LocalDate? = null,
     val mottattKlageinstans: LocalDate? = null,

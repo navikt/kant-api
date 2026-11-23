@@ -79,7 +79,7 @@ class SaksdataService(
         request: SaksdataUpdateRequest,
     ): SaksdataResponse {
         val entity = findForUpdate(id)
-        entity.registreringshjemler = request.registreringshjemmelIdList.map { Registreringshjemmel.of(it) }.toSet()
+        entity.registreringshjemler = request.registreringshjemmelIdList.map { Registreringshjemmel.of(it) }.toMutableSet()
         return repository.saveAndFlush(entity).toResponse()
     }
 
@@ -109,10 +109,12 @@ class SaksdataService(
 
         if (entity.isAvsluttetAvSaksbehandler()) return entity.toResponse()
 
+        val hjemmelSet = request.registreringshjemmelIdList.map { Registreringshjemmel.of(it) }.toMutableSet()
+
         KvalitetsvurderingValidator.validate(
             sakstype = entity.sakstype,
             kvalitetsvurdering = entity.kvalitetsvurdering,
-            registreringshjemler = request.registreringshjemler,
+            registreringshjemler = hjemmelSet,
         )
 
         if (entity.sakstype in listOf(Type.ANKE_ETTER_2027, Type.BEGJAERING_OM_GJENOPPTAK_ETTER_2027)) {
@@ -128,7 +130,7 @@ class SaksdataService(
         }
 
         entity.utfall = request.utfall
-        entity.registreringshjemler = request.registreringshjemler.toMutableSet()
+        entity.registreringshjemler = hjemmelSet
         entity.avsluttetAvSaksbehandler = request.avsluttetAvSaksbehandler
         entity.sakITrygderettenOpprettet = request.sakITrygderettenOpprettet
         entity.mottattKlageinstans = request.mottattKlageinstans
