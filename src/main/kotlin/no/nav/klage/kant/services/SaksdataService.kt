@@ -12,6 +12,7 @@ import no.nav.klage.kant.domain.saksdata.Saksdata
 import no.nav.klage.kant.domain.saksdata.SaksdataAvslutningRequest
 import no.nav.klage.kant.domain.saksdata.SaksdataRequest
 import no.nav.klage.kant.domain.saksdata.SaksdataResponse
+import no.nav.klage.kant.domain.saksdata.SaksdataUpdateRequest
 import no.nav.klage.kant.domain.saksdata.toResponse
 import no.nav.klage.kant.repositories.SaksdataRepository
 import no.nav.klage.kodeverk.Type
@@ -69,6 +70,16 @@ class SaksdataService(
                     trygderettenSaksnummer = input.trygderettenSaksnummer,
                 ),
             ).toResponse()
+    }
+
+    @Transactional
+    fun update(
+        id: UUID,
+        request: SaksdataUpdateRequest,
+    ): SaksdataResponse {
+        val entity = findForUpdate(id)
+        entity.registreringshjemler = request.registreringshjemler.toMutableSet()
+        return repository.saveAndFlush(entity).toResponse()
     }
 
     @Transactional

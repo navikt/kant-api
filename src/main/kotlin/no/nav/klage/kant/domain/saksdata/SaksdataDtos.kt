@@ -17,6 +17,10 @@ data class SaksdataRequest(
     val trygderettenSaksnummer: String,
 )
 
+data class SaksdataUpdateRequest(
+    val registreringshjemler: Set<Registreringshjemmel> = emptySet(),
+)
+
 data class SaksdataAvslutningRequest(
     val utfall: Utfall,
     val registreringshjemler: Set<Registreringshjemmel>,
