@@ -156,7 +156,7 @@ class SaksdataConcurrencyTest
                 utfall = Utfall.MEDHOLD,
                 registreringshjemler = emptySet(),
                 avsluttetAvSaksbehandler = LocalDateTime.of(2026, 11, 16, 12, 0),
-                tilknyttetEnhet = "4291",
+                tilknyttetEnhetId = "4291",
                 tilbakekreving = false,
                 mottattKlageinstans = LocalDate.of(2026, 10, 16),
             )

@@ -39,7 +39,7 @@ class SecurityConfigurationTest : AzureSecurityContractTest() {
                 ytelse = Ytelse.SYK_SYK,
                 mottattKlageinstans = LocalDate.of(2026, 11, 1),
                 sakITrygderettenOpprettet = null,
-                tilknyttetEnhet = null,
+                tilknyttetEnhetId = null,
                 tilbakekreving = null,
                 utfall = null,
                 registreringshjemler = emptySet(),

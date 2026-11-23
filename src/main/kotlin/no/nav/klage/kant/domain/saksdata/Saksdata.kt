@@ -57,7 +57,7 @@ class Saksdata(
     @Column(name = "id")
     var registreringshjemler: Set<Registreringshjemmel>? = null,
     @Column(name = "tilknyttet_enhet")
-    var tilknyttetEnhet: String?,
+    var tilknyttetEnhetId: String?,
     @Column(name = "dato_saksdata_avsluttet_av_saksbehandler")
     var avsluttetAvSaksbehandler: LocalDateTime? = null,
     @Column(name = "tilbakekreving")

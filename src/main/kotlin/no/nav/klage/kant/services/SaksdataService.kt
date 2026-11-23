@@ -64,7 +64,7 @@ class SaksdataService(
                     ytelse = input.ytelse,
                     mottattKlageinstans = null,
                     sakITrygderettenOpprettet = null,
-                    tilknyttetEnhet = null,
+                    tilknyttetEnhetId = null,
                     tilbakekreving = null,
                     kvalitetsvurdering = kvalitetsvurdering,
                     trygderettenSaksnummer = input.trygderettenSaksnummer,
@@ -131,7 +131,7 @@ class SaksdataService(
         entity.avsluttetAvSaksbehandler = request.avsluttetAvSaksbehandler
         entity.sakITrygderettenOpprettet = request.sakITrygderettenOpprettet
         entity.mottattKlageinstans = request.mottattKlageinstans
-        entity.tilknyttetEnhet = request.tilknyttetEnhet
+        entity.tilknyttetEnhetId = request.tilknyttetEnhetId
         entity.tilbakekreving = request.tilbakekreving
         return repository.saveAndFlush(entity).toResponse()
     }

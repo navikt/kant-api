@@ -27,7 +27,7 @@ data class SaksdataAvslutningRequest(
     val avsluttetAvSaksbehandler: LocalDateTime,
     val sakITrygderettenOpprettet: LocalDate? = null,
     val mottattKlageinstans: LocalDate? = null,
-    val tilknyttetEnhet: String,
+    val tilknyttetEnhetId: String,
     val tilbakekreving: Boolean,
 )
 
@@ -38,7 +38,7 @@ data class SaksdataResponse(
     val ytelse: Ytelse,
     val mottattKlageinstans: LocalDate?,
     val sakITrygderettenOpprettet: LocalDate?,
-    val tilknyttetEnhet: String?,
+    val tilknyttetEnhetId: String?,
     val tilbakekreving: Boolean?,
     val utfall: Utfall?,
     val registreringshjemler: Set<Registreringshjemmel>,
@@ -55,7 +55,7 @@ fun Saksdata.toResponse(): SaksdataResponse =
         ytelse = ytelse,
         mottattKlageinstans = mottattKlageinstans,
         sakITrygderettenOpprettet = sakITrygderettenOpprettet,
-        tilknyttetEnhet = tilknyttetEnhet,
+        tilknyttetEnhetId = tilknyttetEnhetId,
         tilbakekreving = tilbakekreving,
         utfall = utfall,
         registreringshjemler = registreringshjemler.orEmpty(),

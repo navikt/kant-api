@@ -122,7 +122,7 @@ class KvalitetsvurderingJsonTest {
                     ytelse = Ytelse.SYK_SYK,
                     mottattKlageinstans = LocalDate.of(2026, 11, 1),
                     sakITrygderettenOpprettet = null,
-                    tilknyttetEnhet = null,
+                    tilknyttetEnhetId = null,
                     tilbakekreving = null,
                     created = created,
                     modified = modified,

@@ -93,7 +93,7 @@ class SaksdataServiceTest {
         response.mottattKlageinstans shouldBe null
         response.avsluttetAvSaksbehandler shouldBe null
         response.sakITrygderettenOpprettet shouldBe null
-        response.tilknyttetEnhet shouldBe null
+        response.tilknyttetEnhetId shouldBe null
         response.tilbakekreving shouldBe null
         response.kvalitetsvurdering shouldBe saved.toKvalitetsvurderingResponse()
     }
@@ -123,7 +123,7 @@ class SaksdataServiceTest {
         response.mottattKlageinstans shouldBe null
         response.avsluttetAvSaksbehandler shouldBe null
         response.sakITrygderettenOpprettet shouldBe null
-        response.tilknyttetEnhet shouldBe null
+        response.tilknyttetEnhetId shouldBe null
         response.tilbakekreving shouldBe null
         response.kvalitetsvurdering shouldBe saved.toKvalitetsvurderingResponse()
     }
@@ -295,7 +295,7 @@ class SaksdataServiceTest {
             response.registreringshjemler shouldBe request.registreringshjemler
             response.avsluttetAvSaksbehandler shouldBe request.avsluttetAvSaksbehandler
             response.sakITrygderettenOpprettet shouldBe opprettet
-            response.tilknyttetEnhet shouldBe request.tilknyttetEnhet
+            response.tilknyttetEnhetId shouldBe request.tilknyttetEnhetId
             response.tilbakekreving shouldBe false
             response.mottattKlageinstans shouldBe request.mottattKlageinstans
             verify(repository).findForUpdate(entity.id)
@@ -474,7 +474,7 @@ class SaksdataServiceTest {
             ytelse = Ytelse.SYK_SYK,
             mottattKlageinstans = mottatt,
             sakITrygderettenOpprettet = null,
-            tilknyttetEnhet = null,
+            tilknyttetEnhetId = null,
             tilbakekreving = null,
             created = created,
             modified = modified,
@@ -570,7 +570,7 @@ class SaksdataServiceTest {
             utfall = Utfall.MEDHOLD,
             registreringshjemler = setOf(Registreringshjemmel.FTRL_1_3),
             avsluttetAvSaksbehandler = LocalDateTime.of(2026, 11, 16, 12, 0),
-            tilknyttetEnhet = "4291",
+            tilknyttetEnhetId = "4291",
             tilbakekreving = false,
             mottattKlageinstans = LocalDate.of(2026, 10, 16),
         )
