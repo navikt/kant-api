@@ -4,7 +4,6 @@ import io.kotest.matchers.shouldBe
 import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeKvalitetsvurderingV1
 import no.nav.klage.kant.domain.saksdata.SaksdataAvslutningRequest
 import no.nav.klage.kant.domain.saksdata.SaksdataRequest
-import no.nav.klage.kant.domain.saksdata.SaksdataUpdateRequest
 import no.nav.klage.kodeverk.Type
 import no.nav.klage.kodeverk.Utfall
 import no.nav.klage.kodeverk.ytelse.Ytelse
@@ -82,13 +81,6 @@ class SaksdataConcurrencyTest
                             jdbcTemplate.execute("SET LOCAL application_name = 'kant-saksdata-concurrency'")
                             mutationAttempting.countDown()
                             when (mutation) {
-                                Mutation.ORDINARY_UPDATE -> {
-                                    service.update(
-                                        id = id,
-                                        request = SaksdataUpdateRequest(utfall = Utfall.STADFESTELSE),
-                                    )
-                                }
-
                                 Mutation.ASSESSMENT_UPDATE -> {
                                     service.updateKvalitetsvurdering(
                                         id = id,
@@ -129,6 +121,7 @@ class SaksdataConcurrencyTest
                         kabalReference = UUID.randomUUID(),
                         sakstype = Type.ANKE_ETTER_2027,
                         ytelse = Ytelse.SYK_SYK,
+                        trygderettenSaksnummer = "1234",
                     ),
                 )
             service.updateKvalitetsvurdering(id = created.id, request = completedAssessment)
@@ -166,7 +159,6 @@ class SaksdataConcurrencyTest
             )
 
         enum class Mutation {
-            ORDINARY_UPDATE,
             ASSESSMENT_UPDATE,
             FINALIZATION,
         }

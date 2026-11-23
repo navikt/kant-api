@@ -10,7 +10,6 @@ import no.nav.klage.kant.domain.saksdata.Saksdata
 import no.nav.klage.kant.domain.saksdata.SaksdataAvslutningRequest
 import no.nav.klage.kant.domain.saksdata.SaksdataRequest
 import no.nav.klage.kant.domain.saksdata.SaksdataResponse
-import no.nav.klage.kant.domain.saksdata.SaksdataUpdateRequest
 import no.nav.klage.kant.domain.saksdata.toResponse
 import no.nav.klage.kant.repositories.SaksdataRepository
 import no.nav.klage.kodeverk.Type
@@ -48,6 +47,8 @@ class SaksdataService(
             when (input.sakstype) {
                 Type.ANKE_ETTER_2027 -> AnkeKvalitetsvurderingV1()
                 Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> AnkeITRKvalitetsvurderingV1()
+                Type.BEGJAERING_OM_GJENOPPTAK_ETTER_2027 -> null
+                Type.BEGJAERING_OM_GJENOPPTAK_I_TRYGDERETTEN_ETTER_2027 -> null
                 else -> throw InvalidSakstypeException()
             }
         val existingEntity = findSaksdataByKabalReference(id = input.kabalReference)
@@ -63,6 +64,7 @@ class SaksdataService(
                     tilknyttetEnhet = null,
                     tilbakekreving = null,
                     kvalitetsvurdering = kvalitetsvurdering,
+                    trygderettenSaksnummer = input.trygderettenSaksnummer,
                 ),
             ).toResponse()
     }
@@ -85,18 +87,6 @@ class SaksdataService(
     }
 
     @Transactional
-    fun update(
-        id: UUID,
-        request: SaksdataUpdateRequest,
-    ): SaksdataResponse {
-        // Meget mulig at dette feltet bare skal gjelde modellen FE bruker
-        val entity = findForUpdate(id)
-        entity.utfall = request.utfall
-        entity.registreringshjemler = request.registreringshjemler.toMutableSet()
-        return repository.saveAndFlush(entity).toResponse()
-    }
-
-    @Transactional
     fun finalize(
         id: UUID,
         request: SaksdataAvslutningRequest,
@@ -111,11 +101,13 @@ class SaksdataService(
             registreringshjemler = request.registreringshjemler,
         )
 
-        if (entity.sakstype == Type.ANKE_ETTER_2027) {
+        if (entity.sakstype in listOf(Type.ANKE_ETTER_2027, Type.BEGJAERING_OM_GJENOPPTAK_ETTER_2027)) {
             if (request.mottattKlageinstans == null) {
-                throw SaksdataInvalidException("Krever mottattKlageinstans for å fullføre anke")
+                throw SaksdataInvalidException("Krever mottattKlageinstans for å fullføre sak")
             }
-        } else if (entity.sakstype == Type.ANKE_I_TRYGDERETTEN_ETTER_2027) {
+        } else if (entity.sakstype in
+            listOf(Type.ANKE_I_TRYGDERETTEN_ETTER_2027, Type.BEGJAERING_OM_GJENOPPTAK_I_TRYGDERETTEN_ETTER_2027)
+        ) {
             if (request.sakITrygderettenOpprettet == null) {
                 throw SaksdataInvalidException("Krever sakITrygderettenOpprettet for å fullføre anke")
             }

@@ -6,7 +6,6 @@ import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationE
 import no.nav.klage.kant.domain.saksdata.SaksdataAvslutningRequest
 import no.nav.klage.kant.domain.saksdata.SaksdataRequest
 import no.nav.klage.kant.domain.saksdata.SaksdataResponse
-import no.nav.klage.kant.domain.saksdata.SaksdataUpdateRequest
 import no.nav.klage.kant.services.SaksdataService
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
@@ -33,12 +32,6 @@ class SaksdataController(
     fun create(
         @Valid @RequestBody request: SaksdataRequest,
     ): SaksdataResponse = saksdataService.create(request)
-
-    @PutMapping("/{id}")
-    fun update(
-        @PathVariable id: UUID,
-        @Valid @RequestBody request: SaksdataUpdateRequest,
-    ): SaksdataResponse = saksdataService.update(id = id, request = request)
 
     @PutMapping("/{id}/kvalitetsvurdering")
     fun updateKvalitetsvurdering(

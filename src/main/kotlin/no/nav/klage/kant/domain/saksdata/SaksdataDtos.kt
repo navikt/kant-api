@@ -13,6 +13,7 @@ data class SaksdataRequest(
     val kabalReference: UUID,
     val sakstype: Type,
     val ytelse: Ytelse,
+    val trygderettenSaksnummer: String,
 )
 
 data class SaksdataUpdateRequest(
@@ -43,6 +44,7 @@ data class SaksdataResponse(
     val registreringshjemler: Set<Registreringshjemmel>,
     val avsluttetAvSaksbehandler: LocalDateTime?,
     val kvalitetsvurdering: Kvalitetsvurdering? = null,
+    val trygderettenSaksnummer: String,
 )
 
 fun Saksdata.toResponse(): SaksdataResponse =
@@ -59,4 +61,5 @@ fun Saksdata.toResponse(): SaksdataResponse =
         registreringshjemler = registreringshjemler.orEmpty(),
         avsluttetAvSaksbehandler = avsluttetAvSaksbehandler,
         kvalitetsvurdering = kvalitetsvurdering,
+        trygderettenSaksnummer = trygderettenSaksnummer,
     )

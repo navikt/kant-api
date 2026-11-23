@@ -44,6 +44,7 @@ class SecurityConfigurationTest : AzureSecurityContractTest() {
                 utfall = null,
                 registreringshjemler = emptySet(),
                 avsluttetAvSaksbehandler = null,
+                trygderettenSaksnummer = "1234",
             ),
         )
     }

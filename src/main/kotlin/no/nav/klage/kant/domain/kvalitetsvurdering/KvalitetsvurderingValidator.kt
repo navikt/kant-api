@@ -9,6 +9,7 @@ object KvalitetsvurderingValidator {
         kvalitetsvurdering: Kvalitetsvurdering?,
         registreringshjemler: Set<Registreringshjemmel>,
     ) {
+        if (sakstype in listOf(Type.BEGJAERING_OM_GJENOPPTAK_ETTER_2027, Type.BEGJAERING_OM_GJENOPPTAK_I_TRYGDERETTEN_ETTER_2027)) return
         val errors =
             buildList<KvalitetsvurderingValidationError> {
                 when (kvalitetsvurdering) {

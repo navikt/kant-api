@@ -90,6 +90,7 @@ class KvalitetsvurderingJsonTest {
                 tilknyttetEnhet = null,
                 tilbakekreving = null,
                 kvalitetsvurdering = value,
+                trygderettenSaksnummer = "1234",
             )
 
         entity.toResponse().kvalitetsvurdering shouldBe value

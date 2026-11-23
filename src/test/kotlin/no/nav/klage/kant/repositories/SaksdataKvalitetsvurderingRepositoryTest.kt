@@ -132,6 +132,7 @@ class SaksdataKvalitetsvurderingRepositoryTest
             tilknyttetEnhet = null,
             tilbakekreving = null,
             kvalitetsvurdering = kvalitetsvurdering,
+            trygderettenSaksnummer = "1234",
         )
 
         companion object {

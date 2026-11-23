@@ -67,6 +67,8 @@ class Saksdata(
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "kvalitetsvurdering", columnDefinition = "jsonb")
     var kvalitetsvurdering: Kvalitetsvurdering? = null,
+    @Column(name = "trygderetten_saksnummer", nullable = false)
+    var trygderettenSaksnummer: String,
 ) {
     fun isAvsluttetAvSaksbehandler() = avsluttetAvSaksbehandler != null
 }
