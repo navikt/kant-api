@@ -75,7 +75,7 @@ class RegistreringshjemmelJsonConfigurationTest {
                 .perform(
                     put("/api/saksdata/$id")
                         .contentType(APPLICATION_JSON)
-                        .content("""{"registreringshjemler":["${hjemmel.id}"]}"""),
+                        .content("""{"registreringshjemmelIdList":["${hjemmel.id}"]}"""),
                 ).andExpect(status().isOk)
                 .andExpect(jsonPath("$.registreringshjemler[0]").value(hjemmel.id))
 

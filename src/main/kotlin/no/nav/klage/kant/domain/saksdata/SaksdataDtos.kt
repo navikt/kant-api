@@ -18,7 +18,7 @@ data class SaksdataRequest(
 )
 
 data class SaksdataUpdateRequest(
-    val registreringshjemler: Set<Registreringshjemmel> = emptySet(),
+    val registreringshjemmelIdList: Set<String> = emptySet(),
 )
 
 data class SaksdataAvslutningRequest(

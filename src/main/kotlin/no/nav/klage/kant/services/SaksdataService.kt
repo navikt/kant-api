@@ -16,6 +16,7 @@ import no.nav.klage.kant.domain.saksdata.SaksdataUpdateRequest
 import no.nav.klage.kant.domain.saksdata.toResponse
 import no.nav.klage.kant.repositories.SaksdataRepository
 import no.nav.klage.kodeverk.Type
+import no.nav.klage.kodeverk.hjemmel.Registreringshjemmel
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -78,7 +79,7 @@ class SaksdataService(
         request: SaksdataUpdateRequest,
     ): SaksdataResponse {
         val entity = findForUpdate(id)
-        entity.registreringshjemler = request.registreringshjemler.toMutableSet()
+        entity.registreringshjemler = request.registreringshjemmelIdList.map { Registreringshjemmel.of(it) }.toSet()
         return repository.saveAndFlush(entity).toResponse()
     }
 
