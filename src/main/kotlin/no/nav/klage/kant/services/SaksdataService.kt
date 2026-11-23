@@ -3,7 +3,6 @@ package no.nav.klage.kant.services
 import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeITRKvalitetsvurderingV1
 import no.nav.klage.kant.domain.kvalitetsvurdering.AnkeKvalitetsvurderingV1
 import no.nav.klage.kant.domain.kvalitetsvurdering.Kvalitetsvurdering
-import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationError
 import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationErrors
 import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidationException
 import no.nav.klage.kant.domain.kvalitetsvurdering.KvalitetsvurderingValidator
@@ -18,7 +17,6 @@ import no.nav.klage.kodeverk.Type
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
-import kotlin.collections.emptyList
 
 @Service
 @Transactional(readOnly = true)
@@ -142,6 +140,8 @@ class SaksdataService(
         if (entity.isAvsluttetAvSaksbehandler()) throw SaksdataConflictException("Saksdata is already finalized")
         return entity
     }
+
+    fun getKvalitetsvurdering(id: UUID): Kvalitetsvurdering? = findSaksdataOrThrowError(id).kvalitetsvurdering
 }
 
 class InvalidSakstypeException :

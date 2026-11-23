@@ -46,6 +46,11 @@ class SaksdataController(
         @Valid @RequestBody request: Kvalitetsvurdering,
     ): SaksdataResponse = saksdataService.updateKvalitetsvurdering(id = id, request = request)
 
+    @GetMapping("/{id}/kvalitetsvurdering")
+    fun getKvalitetsvurdering(
+        @PathVariable id: UUID,
+    ): Kvalitetsvurdering? = saksdataService.getKvalitetsvurdering(id = id)
+
     @PostMapping("/{id}/finalize")
     fun finalize(
         @PathVariable id: UUID,
