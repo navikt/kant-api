@@ -292,7 +292,7 @@ class SaksdataServiceTest {
             val response = service.finalize(id = entity.id, request = request)
 
             response.utfall shouldBe request.utfall
-            response.registreringshjemler shouldBe request.registreringshjemmelIdList.map { Registreringshjemmel.of(it) }.toSet()
+            response.registreringshjemler shouldBe request.registreringshjemmelIdSet.map { Registreringshjemmel.of(it) }.toSet()
             response.avsluttetAvSaksbehandler shouldBe request.avsluttetAvSaksbehandler
             response.sakITrygderettenOpprettet shouldBe opprettet
             response.tilknyttetEnhetId shouldBe request.tilknyttetEnhetId
@@ -327,7 +327,7 @@ class SaksdataServiceTest {
         assertThrows<KvalitetsvurderingValidationException> {
             service.finalize(
                 id = entity.id,
-                request = avslutning().copy(registreringshjemmelIdList = emptySet()),
+                request = avslutning().copy(registreringshjemmelIdSet = emptySet()),
             )
         }
 
@@ -568,7 +568,7 @@ class SaksdataServiceTest {
     private fun avslutning(): SaksdataAvslutningRequest =
         SaksdataAvslutningRequest(
             utfall = Utfall.MEDHOLD,
-            registreringshjemmelIdList = setOf(Registreringshjemmel.FTRL_1_3.id),
+            registreringshjemmelIdSet = setOf(Registreringshjemmel.FTRL_1_3.id),
             avsluttetAvSaksbehandler = LocalDateTime.of(2026, 11, 16, 12, 0),
             tilknyttetEnhetId = "4291",
             tilbakekreving = false,

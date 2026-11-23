@@ -18,12 +18,12 @@ data class SaksdataRequest(
 )
 
 data class SaksdataUpdateRequest(
-    val registreringshjemmelIdList: Set<String> = emptySet(),
+    val registreringshjemmelIdSet: Set<String> = emptySet(),
 )
 
 data class SaksdataAvslutningRequest(
     val utfall: Utfall,
-    val registreringshjemmelIdList: Set<String>,
+    val registreringshjemmelIdSet: Set<String>,
     val avsluttetAvSaksbehandler: LocalDateTime,
     val sakITrygderettenOpprettet: LocalDate? = null,
     val mottattKlageinstans: LocalDate? = null,

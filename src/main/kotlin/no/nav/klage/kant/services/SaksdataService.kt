@@ -79,7 +79,7 @@ class SaksdataService(
         request: SaksdataUpdateRequest,
     ): SaksdataResponse {
         val entity = findForUpdate(id)
-        entity.registreringshjemler = request.registreringshjemmelIdList.map { Registreringshjemmel.of(it) }.toMutableSet()
+        entity.registreringshjemler = request.registreringshjemmelIdSet.map { Registreringshjemmel.of(it) }.toMutableSet()
         return repository.saveAndFlush(entity).toResponse()
     }
 
@@ -109,7 +109,7 @@ class SaksdataService(
 
         if (entity.isAvsluttetAvSaksbehandler()) return entity.toResponse()
 
-        val hjemmelSet = request.registreringshjemmelIdList.map { Registreringshjemmel.of(it) }.toMutableSet()
+        val hjemmelSet = request.registreringshjemmelIdSet.map { Registreringshjemmel.of(it) }.toMutableSet()
 
         KvalitetsvurderingValidator.validate(
             sakstype = entity.sakstype,
