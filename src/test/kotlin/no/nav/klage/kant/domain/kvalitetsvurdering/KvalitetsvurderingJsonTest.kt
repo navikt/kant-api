@@ -62,7 +62,7 @@ class KvalitetsvurderingJsonTest {
                         kjennelsensBetydningOgLaeringsverdi =
                             AnkeITRKvalitetsvurderingV1.KjennelsensBetydningOgLaeringsverdi(
                                 avsagtMedForenkletBegrunnelse = false,
-                                prinsipieltRettsspoersmaal = true,
+                                prinsipiellBetydning = true,
                             ),
                     ),
             )

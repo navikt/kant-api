@@ -1,5 +1,6 @@
 package no.nav.klage.kant.domain.kvalitetsvurdering
 
+import no.nav.klage.kant.domain.saksdata.Saksdata
 import no.nav.klage.kodeverk.Type
 import no.nav.klage.kodeverk.hjemmel.Registreringshjemmel
 
@@ -32,7 +33,7 @@ object KvalitetsvurderingValidator {
                     null -> {
                         add(
                             KvalitetsvurderingValidationError(
-                                field = "kvalitetsvurdering",
+                                field = Saksdata::kvalitetsvurdering.name,
                                 reason = "Må fylles ut før fullføring",
                             ),
                         )
@@ -47,9 +48,9 @@ object KvalitetsvurderingValidator {
         allowedHjemler: Set<Registreringshjemmel>,
     ) {
         val omgjort = assessment.omgjortIKlageomgangen
-        val path = "kvalitetsvurdering.omgjortIKlageomgangen"
+        val path = "${Saksdata::kvalitetsvurdering.name}.${AnkeKvalitetsvurderingV1::omgjortIKlageomgangen.name}"
         validateOmgjort(
-            field = "$path.vedtaketBurdeVaertOmgjortIKlageomgangen",
+            field = "$path.${omgjort::vedtaketBurdeVaertOmgjortIKlageomgangen.name}",
             answer = omgjort.vedtaketBurdeVaertOmgjortIKlageomgangen,
             selected =
                 listOf(
@@ -59,19 +60,19 @@ object KvalitetsvurderingValidator {
                 ),
         )
         validateSelector(
-            field = "$path.feilILovtolkningen.registreringshjemler",
+            field = "$path.${omgjort::feilILovtolkningen.name}.${omgjort.feilILovtolkningen::registreringshjemler.name}",
             selected = omgjort.feilILovtolkningen.selected,
             hjemler = omgjort.feilILovtolkningen.registreringshjemler,
             allowedHjemler = allowedHjemler,
         )
         validateSelector(
-            field = "$path.feilIFaktagrunnlaget.registreringshjemler",
+            field = "$path.${omgjort::feilIFaktagrunnlaget.name}.${omgjort.feilIFaktagrunnlaget::registreringshjemler.name}",
             selected = omgjort.feilIFaktagrunnlaget.selected,
             hjemler = omgjort.feilIFaktagrunnlaget.registreringshjemler,
             allowedHjemler = allowedHjemler,
         )
         validateSelector(
-            field = "$path.feilIRettsanvendelsen.registreringshjemler",
+            field = "$path.${omgjort::feilIRettsanvendelsen.name}.${omgjort.feilIRettsanvendelsen::registreringshjemler.name}",
             selected = omgjort.feilIRettsanvendelsen.selected,
             hjemler = omgjort.feilIRettsanvendelsen.registreringshjemler,
             allowedHjemler = allowedHjemler,
@@ -83,9 +84,9 @@ object KvalitetsvurderingValidator {
         allowedHjemler: Set<Registreringshjemmel>,
     ) {
         val omgjort = assessment.omgjortIAnkeomgangen
-        val path = "kvalitetsvurdering.omgjortIAnkeomgangen"
+        val path = "${Saksdata::kvalitetsvurdering.name}.${AnkeITRKvalitetsvurderingV1::omgjortIAnkeomgangen.name}"
         validateOmgjort(
-            field = "$path.vedtaketBurdeVaertOmgjortIAnkeomgangen",
+            field = "$path.${omgjort::vedtaketBurdeVaertOmgjortIAnkeomgangen.name}",
             answer = omgjort.vedtaketBurdeVaertOmgjortIAnkeomgangen,
             selected =
                 listOf(
@@ -95,60 +96,61 @@ object KvalitetsvurderingValidator {
                 ),
         )
         validateSelector(
-            field = "$path.feilILovtolkningen.registreringshjemler",
+            field = "$path.${omgjort::feilILovtolkningen.name}.${omgjort.feilILovtolkningen::registreringshjemler.name}",
             selected = omgjort.feilILovtolkningen.selected,
             hjemler = omgjort.feilILovtolkningen.registreringshjemler,
             allowedHjemler = allowedHjemler,
         )
         validateSelector(
-            field = "$path.feilIFaktagrunnlaget.registreringshjemler",
+            field = "$path.${omgjort::feilIFaktagrunnlaget.name}.${omgjort.feilIFaktagrunnlaget::registreringshjemler.name}",
             selected = omgjort.feilIFaktagrunnlaget.selected,
             hjemler = omgjort.feilIFaktagrunnlaget.registreringshjemler,
             allowedHjemler = allowedHjemler,
         )
         validateSelector(
-            field = "$path.feilIRettsanvendelsen.registreringshjemler",
+            field = "$path.${omgjort::feilIRettsanvendelsen.name}.${omgjort.feilIRettsanvendelsen::registreringshjemler.name}",
             selected = omgjort.feilIRettsanvendelsen.selected,
             hjemler = omgjort.feilIRettsanvendelsen.registreringshjemler,
             allowedHjemler = allowedHjemler,
         )
         val sammensetning = assessment.rettensSammensetning
+        val sammensetningPath = "${Saksdata::kvalitetsvurdering.name}.${assessment::rettensSammensetning.name}"
         requireAnswer(
-            field = "kvalitetsvurdering.rettensSammensetning.rettensSammensetning",
+            field = "$sammensetningPath.${sammensetning::rettensSammensetning.name}",
             value = sammensetning.rettensSammensetning,
         )
         requireAnswer(
-            field = "kvalitetsvurdering.rettensSammensetning.attfoeringskyndigEllerMedisinskKyndig",
+            field = "$sammensetningPath.${sammensetning::attfoeringskyndigEllerMedisinskKyndig.name}",
             value = sammensetning.attfoeringskyndigEllerMedisinskKyndig,
         )
         val betydning = assessment.kjennelsensBetydningOgLaeringsverdi
-        val betydningPath = "kvalitetsvurdering.kjennelsensBetydningOgLaeringsverdi"
+        val betydningPath = "${Saksdata::kvalitetsvurdering.name}.${assessment::kjennelsensBetydningOgLaeringsverdi.name}"
         requireAnswer(
-            field = "$betydningPath.avsagtMedForenkletBegrunnelse",
+            field = "$betydningPath.${betydning::avsagtMedForenkletBegrunnelse.name}",
             value = betydning.avsagtMedForenkletBegrunnelse,
         )
         requireAnswer(
-            field = "$betydningPath.prinsipieltRettsspoersmaal",
-            value = betydning.prinsipieltRettsspoersmaal,
+            field = "$betydningPath.${betydning::prinsipiellBetydning.name}",
+            value = betydning.prinsipiellBetydning,
         )
         requireAnswer(
-            field = "$betydningPath.bryterMedEtablertPraksisINavEllerTR",
+            field = "$betydningPath.${betydning::bryterMedEtablertPraksisINavEllerTR.name}",
             value = betydning.bryterMedEtablertPraksisINavEllerTR,
         )
         requireAnswer(
-            field = "$betydningPath.betydningForFlereFagomraader",
+            field = "$betydningPath.${betydning::betydningForFlereFagomraader.name}",
             value = betydning.betydningForFlereFagomraader,
         )
         requireAnswer(
-            field = "$betydningPath.inneholderLaeringspunkterKnyttetTilGenerellForvaltningsrettEllerGenerellJuss",
+            field = "$betydningPath.${betydning::inneholderLaeringspunkterKnyttetTilGenerellForvaltningsrettEllerGenerellJuss.name}",
             value = betydning.inneholderLaeringspunkterKnyttetTilGenerellForvaltningsrettEllerGenerellJuss,
         )
         requireAnswer(
-            field = "$betydningPath.omhandlerEOESRettEllerAnnetInternasjonaltRegelverk",
+            field = "$betydningPath.${betydning::omhandlerEOESRettEllerAnnetInternasjonaltRegelverk.name}",
             value = betydning.omhandlerEOESRettEllerAnnetInternasjonaltRegelverk,
         )
         requireAnswer(
-            field = "$betydningPath.boerDelesMedFagmiljoetSomLaeringseksempel",
+            field = "$betydningPath.${betydning::boerDelesMedFagmiljoetSomLaeringseksempel.name}",
             value = betydning.boerDelesMedFagmiljoetSomLaeringseksempel,
         )
     }
@@ -200,7 +202,7 @@ object KvalitetsvurderingValidator {
 
     private fun typeMismatch() =
         KvalitetsvurderingValidationError(
-            field = "kvalitetsvurdering",
+            field = Saksdata::kvalitetsvurdering.name,
             reason = "Kvalitetsvurderingstype samsvarer ikke med sakstype",
         )
 }

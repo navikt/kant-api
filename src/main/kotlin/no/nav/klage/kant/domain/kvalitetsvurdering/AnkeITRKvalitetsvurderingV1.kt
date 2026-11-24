@@ -40,7 +40,7 @@ data class AnkeITRKvalitetsvurderingV1(
 
     data class KjennelsensBetydningOgLaeringsverdi(
         val avsagtMedForenkletBegrunnelse: Boolean? = null,
-        val prinsipieltRettsspoersmaal: Boolean? = null,
+        val prinsipiellBetydning: Boolean? = null,
         val bryterMedEtablertPraksisINavEllerTR: Boolean? = null,
         val betydningForFlereFagomraader: Boolean? = null,
         val inneholderLaeringspunkterKnyttetTilGenerellForvaltningsrettEllerGenerellJuss: Boolean? = null,

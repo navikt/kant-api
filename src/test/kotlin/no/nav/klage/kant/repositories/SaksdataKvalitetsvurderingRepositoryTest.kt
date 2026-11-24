@@ -62,7 +62,7 @@ class SaksdataKvalitetsvurderingRepositoryTest
                         ),
                     kjennelsensBetydningOgLaeringsverdi =
                         AnkeITRKvalitetsvurderingV1.KjennelsensBetydningOgLaeringsverdi(
-                            prinsipieltRettsspoersmaal = false,
+                            prinsipiellBetydning = false,
                         ),
                 )
             val anke =

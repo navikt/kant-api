@@ -2,6 +2,7 @@ package no.nav.klage.kant.domain.kvalitetsvurdering
 
 import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.shouldBe
+import no.nav.klage.kant.domain.saksdata.Saksdata
 import no.nav.klage.kodeverk.Type
 import no.nav.klage.kodeverk.hjemmel.Registreringshjemmel
 import org.junit.jupiter.api.Test
@@ -27,12 +28,12 @@ class KvalitetsvurderingValidatorTest {
         supportedTypes.forEach { sakstype ->
             validationErrors(sakstype = sakstype, assessment = null)
                 .map { it.field }
-                .toSet() shouldBe setOf("kvalitetsvurdering")
+                .toSet() shouldBe setOf(Saksdata::kvalitetsvurdering.name)
             validationErrors(
                 sakstype = sakstype,
                 assessment = completeAssessment(otherSupportedType(sakstype)),
             ).map { it.field }
-                .toSet() shouldBe setOf("kvalitetsvurdering")
+                .toSet() shouldBe setOf(Saksdata::kvalitetsvurdering.name)
         }
     }
 
@@ -44,7 +45,7 @@ class KvalitetsvurderingValidatorTest {
                 assessment = AnkeKvalitetsvurderingV1(),
             )
         ankeErrors.map { it.field } shouldContainAll
-            listOf("kvalitetsvurdering.omgjortIKlageomgangen.vedtaketBurdeVaertOmgjortIKlageomgangen")
+            listOf(omgjortField(Type.ANKE_ETTER_2027))
 
         val itrErrors =
             validationErrors(
@@ -52,7 +53,7 @@ class KvalitetsvurderingValidatorTest {
                 assessment = AnkeITRKvalitetsvurderingV1(),
             )
         itrErrors.map { it.field } shouldContainAll
-            listOf("kvalitetsvurdering.omgjortIAnkeomgangen.vedtaketBurdeVaertOmgjortIAnkeomgangen")
+            listOf(omgjortField(Type.ANKE_I_TRYGDERETTEN_ETTER_2027))
     }
 
     @Test
@@ -61,7 +62,7 @@ class KvalitetsvurderingValidatorTest {
             val trueWithoutReason =
                 assessmentWithOmgjort(sakstype = sakstype, omgjort = true, withReason = false)
             val missingReasonErrors = validationErrors(sakstype = sakstype, assessment = trueWithoutReason)
-            missingReasonErrors.any { it.field.contains("vedtaketBurdeVaertOmgjort") } shouldBe true
+            missingReasonErrors.any { it.field == omgjortField(sakstype) } shouldBe true
 
             val falseWithReason =
                 assessmentWithOmgjort(sakstype = sakstype, omgjort = false, withReason = true)
@@ -71,7 +72,7 @@ class KvalitetsvurderingValidatorTest {
                     assessment = falseWithReason,
                     registreringshjemler = setOf(hjemmel),
                 )
-            contradictoryErrors.any { it.field.contains("vedtaketBurdeVaertOmgjort") } shouldBe true
+            contradictoryErrors.any { it.field == omgjortField(sakstype) } shouldBe true
 
             KvalitetsvurderingValidator.validate(
                 sakstype = sakstype,
@@ -85,12 +86,7 @@ class KvalitetsvurderingValidatorTest {
     @Test
     fun `validates selected and unselected selector homes against finalization homes`() {
         supportedTypes.forEach { sakstype ->
-            val section =
-                if (sakstype == Type.ANKE_ETTER_2027) {
-                    "omgjortIKlageomgangen"
-                } else {
-                    "omgjortIAnkeomgangen"
-                }
+            val expectedFields = selectorFields(sakstype)
             val errors =
                 validationErrors(
                     sakstype = sakstype,
@@ -99,12 +95,8 @@ class KvalitetsvurderingValidatorTest {
                 )
 
             val fields = errors.map { it.field }.toSet()
-            fields shouldContainAll
-                setOf(
-                    "kvalitetsvurdering.$section.feilILovtolkningen.registreringshjemler",
-                    "kvalitetsvurdering.$section.feilIFaktagrunnlaget.registreringshjemler",
-                )
-            fields.contains("kvalitetsvurdering.$section.feilIRettsanvendelsen.registreringshjemler") shouldBe false
+            fields shouldContainAll expectedFields.take(2)
+            fields.contains(expectedFields.last()) shouldBe false
         }
     }
 
@@ -119,34 +111,75 @@ class KvalitetsvurderingValidatorTest {
                 )
 
             errors.size shouldBe 1
-            errors.single().field.endsWith(".feilILovtolkningen.registreringshjemler") shouldBe true
+            errors.single().field shouldBe selectorFields(sakstype).first()
         }
     }
 
     @Test
     fun `requires both ITR composition fields and all seven learning answers`() {
-        val learningPath = "kvalitetsvurdering.kjennelsensBetydningOgLaeringsverdi."
+        val assessment = AnkeITRKvalitetsvurderingV1()
+        val sammensetning = assessment.rettensSammensetning
+        val sammensetningPath = "${Saksdata::kvalitetsvurdering.name}.${assessment::rettensSammensetning.name}"
+        val betydning = assessment.kjennelsensBetydningOgLaeringsverdi
+        val learningPath = "${Saksdata::kvalitetsvurdering.name}.${assessment::kjennelsensBetydningOgLaeringsverdi.name}"
         val fields =
             validationErrors(
                 sakstype = Type.ANKE_I_TRYGDERETTEN_ETTER_2027,
-                assessment = AnkeITRKvalitetsvurderingV1(),
+                assessment = assessment,
             ).map { it.field }
                 .toSet()
 
         fields shouldContainAll
             setOf(
-                "kvalitetsvurdering.rettensSammensetning.rettensSammensetning",
-                "kvalitetsvurdering.rettensSammensetning.attfoeringskyndigEllerMedisinskKyndig",
-                "${learningPath}avsagtMedForenkletBegrunnelse",
-                "${learningPath}prinsipieltRettsspoersmaal",
-                "${learningPath}bryterMedEtablertPraksisINavEllerTR",
-                "${learningPath}betydningForFlereFagomraader",
-                learningPath +
-                    "inneholderLaeringspunkterKnyttetTilGenerellForvaltningsrettEllerGenerellJuss",
-                "${learningPath}omhandlerEOESRettEllerAnnetInternasjonaltRegelverk",
-                "${learningPath}boerDelesMedFagmiljoetSomLaeringseksempel",
+                "$sammensetningPath.${sammensetning::rettensSammensetning.name}",
+                "$sammensetningPath.${sammensetning::attfoeringskyndigEllerMedisinskKyndig.name}",
+                "$learningPath.${betydning::avsagtMedForenkletBegrunnelse.name}",
+                "$learningPath.${betydning::prinsipiellBetydning.name}",
+                "$learningPath.${betydning::bryterMedEtablertPraksisINavEllerTR.name}",
+                "$learningPath.${betydning::betydningForFlereFagomraader.name}",
+                "$learningPath.${betydning::inneholderLaeringspunkterKnyttetTilGenerellForvaltningsrettEllerGenerellJuss.name}",
+                "$learningPath.${betydning::omhandlerEOESRettEllerAnnetInternasjonaltRegelverk.name}",
+                "$learningPath.${betydning::boerDelesMedFagmiljoetSomLaeringseksempel.name}",
             )
     }
+
+    private fun omgjortField(sakstype: Type): String =
+        when (val assessment = completeAssessment(sakstype)) {
+            is AnkeKvalitetsvurderingV1 -> {
+                val omgjort = assessment.omgjortIKlageomgangen
+                val path = "${Saksdata::kvalitetsvurdering.name}.${assessment::omgjortIKlageomgangen.name}"
+                "$path.${omgjort::vedtaketBurdeVaertOmgjortIKlageomgangen.name}"
+            }
+
+            is AnkeITRKvalitetsvurderingV1 -> {
+                val omgjort = assessment.omgjortIAnkeomgangen
+                val path = "${Saksdata::kvalitetsvurdering.name}.${assessment::omgjortIAnkeomgangen.name}"
+                "$path.${omgjort::vedtaketBurdeVaertOmgjortIAnkeomgangen.name}"
+            }
+        }
+
+    private fun selectorFields(sakstype: Type): List<String> =
+        when (val assessment = completeAssessment(sakstype)) {
+            is AnkeKvalitetsvurderingV1 -> {
+                val omgjort = assessment.omgjortIKlageomgangen
+                val path = "${Saksdata::kvalitetsvurdering.name}.${assessment::omgjortIKlageomgangen.name}"
+                listOf(
+                    "$path.${omgjort::feilILovtolkningen.name}.${omgjort.feilILovtolkningen::registreringshjemler.name}",
+                    "$path.${omgjort::feilIFaktagrunnlaget.name}.${omgjort.feilIFaktagrunnlaget::registreringshjemler.name}",
+                    "$path.${omgjort::feilIRettsanvendelsen.name}.${omgjort.feilIRettsanvendelsen::registreringshjemler.name}",
+                )
+            }
+
+            is AnkeITRKvalitetsvurderingV1 -> {
+                val omgjort = assessment.omgjortIAnkeomgangen
+                val path = "${Saksdata::kvalitetsvurdering.name}.${assessment::omgjortIAnkeomgangen.name}"
+                listOf(
+                    "$path.${omgjort::feilILovtolkningen.name}.${omgjort.feilILovtolkningen::registreringshjemler.name}",
+                    "$path.${omgjort::feilIFaktagrunnlaget.name}.${omgjort.feilIFaktagrunnlaget::registreringshjemler.name}",
+                    "$path.${omgjort::feilIRettsanvendelsen.name}.${omgjort.feilIRettsanvendelsen::registreringshjemler.name}",
+                )
+            }
+        }
 
     private fun validationErrors(
         sakstype: Type,
@@ -188,7 +221,7 @@ class KvalitetsvurderingValidatorTest {
                     kjennelsensBetydningOgLaeringsverdi =
                         AnkeITRKvalitetsvurderingV1.KjennelsensBetydningOgLaeringsverdi(
                             avsagtMedForenkletBegrunnelse = false,
-                            prinsipieltRettsspoersmaal = false,
+                            prinsipiellBetydning = false,
                             bryterMedEtablertPraksisINavEllerTR = false,
                             betydningForFlereFagomraader = false,
                             inneholderLaeringspunkterKnyttetTilGenerellForvaltningsrettEllerGenerellJuss = false,
