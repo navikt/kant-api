@@ -16,6 +16,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.Mockito.any
+import org.mockito.Mockito.never
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
@@ -25,8 +27,10 @@ import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
@@ -81,6 +85,54 @@ class RegistreringshjemmelJsonConfigurationTest {
 
             saksdata.registreringshjemler shouldBe setOf(hjemmel)
         }
+    }
+
+    @Test
+    fun `deletes open saksdata and returns no content`() {
+        mockMvc
+            .perform(delete("/api/saksdata/$id"))
+            .andExpect(status().isNoContent)
+            .andExpect(content().string(""))
+
+        verify(saksdataRepository).findForUpdate(id)
+        verify(saksdataRepository).delete(saksdata)
+    }
+
+    @Test
+    fun `delete returns conflict for finalized saksdata without deleting it`() {
+        saksdata.avsluttetAvSaksbehandler = java.time.LocalDateTime.of(2026, 11, 16, 12, 0)
+
+        mockMvc
+            .perform(delete("/api/saksdata/$id"))
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.detail").value("Saksdata is already finalized"))
+
+        verify(saksdataRepository).findForUpdate(id)
+        verify(saksdataRepository, never()).delete(any<Saksdata>())
+    }
+
+    @Test
+    fun `delete returns not found for missing saksdata without deleting it`() {
+        val missingId = UUID.randomUUID()
+        `when`(saksdataRepository.findForUpdate(missingId)).thenReturn(null)
+
+        mockMvc
+            .perform(delete("/api/saksdata/$missingId"))
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.detail").value("Saksdata not found"))
+
+        verify(saksdataRepository).findForUpdate(missingId)
+        verify(saksdataRepository, never()).delete(any<Saksdata>())
+    }
+
+    @Test
+    fun `delete rejects malformed UUID as a problem detail without accessing the repository`() {
+        mockMvc
+            .perform(delete("/api/saksdata/not-a-uuid"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.detail").value("Invalid request"))
+
+        verifyNoInteractions(saksdataRepository)
     }
 
     @ParameterizedTest

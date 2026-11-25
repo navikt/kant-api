@@ -12,6 +12,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import java.time.LocalDate
 import java.util.UUID
@@ -47,5 +48,19 @@ class SecurityConfigurationTest : AzureSecurityContractTest() {
                 trygderettenSaksnummer = "1234",
             ),
         )
+    }
+
+    @WebMvcTest(SaksdataController::class)
+    @Import(SecurityConfiguration::class)
+    class SaksdataDeleteSecurityConfigurationTest : AzureSecurityContractTest() {
+        @MockitoBean
+        private lateinit var saksdataService: SaksdataService
+
+        private val id = UUID.randomUUID()
+
+        override fun protectedRequest(): MockHttpServletRequestBuilder = delete("/api/saksdata/$id")
+
+        override fun unauthenticatedPaths(): List<String> =
+            listOf("/internal/health", "/internal/health/liveness", "/internal/health/readiness", "/internal/prometheus")
     }
 }

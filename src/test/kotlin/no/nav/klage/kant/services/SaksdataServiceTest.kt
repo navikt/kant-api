@@ -44,9 +44,13 @@ class SaksdataServiceTest {
         @JvmStatic
         fun supportedTypes(): List<Type> =
             listOf(
+                Type.ANKE_FOER_2027,
                 Type.ANKE_ETTER_2027,
+                Type.ANKE_I_TRYGDERETTEN_FOER_2027,
                 Type.ANKE_I_TRYGDERETTEN_ETTER_2027,
+                Type.BEGJAERING_OM_GJENOPPTAK_FOER_2027,
                 Type.BEGJAERING_OM_GJENOPPTAK_ETTER_2027,
+                Type.BEGJAERING_OM_GJENOPPTAK_I_TRYGDERETTEN_FOER_2027,
                 Type.BEGJAERING_OM_GJENOPPTAK_I_TRYGDERETTEN_ETTER_2027,
             )
 
@@ -56,14 +60,18 @@ class SaksdataServiceTest {
         @JvmStatic
         fun supportedTypesWithKvalitetsvurdering(): List<Type> =
             listOf(
+                Type.ANKE_FOER_2027,
                 Type.ANKE_ETTER_2027,
+                Type.ANKE_I_TRYGDERETTEN_FOER_2027,
                 Type.ANKE_I_TRYGDERETTEN_ETTER_2027,
             )
 
         @JvmStatic
         fun supportedTypesWithoutKvalitetsvurdering(): List<Type> =
             listOf(
+                Type.BEGJAERING_OM_GJENOPPTAK_FOER_2027,
                 Type.BEGJAERING_OM_GJENOPPTAK_ETTER_2027,
+                Type.BEGJAERING_OM_GJENOPPTAK_I_TRYGDERETTEN_FOER_2027,
                 Type.BEGJAERING_OM_GJENOPPTAK_I_TRYGDERETTEN_ETTER_2027,
             )
     }
@@ -353,6 +361,42 @@ class SaksdataServiceTest {
         verify(repository, never()).saveAndFlush(any(Saksdata::class.java))
     }
 
+    @Test
+    fun `delete removes open saksdata after locking it for update`() {
+        val entity = saksdata()
+        `when`(repository.findForUpdate(entity.id)).thenReturn(entity)
+
+        service.delete(entity.id)
+
+        verify(repository).findForUpdate(entity.id)
+        verify(repository).delete(entity)
+    }
+
+    @Test
+    fun `delete rejects finalized saksdata without deleting it`() {
+        val entity =
+            saksdata().apply {
+                avsluttetAvSaksbehandler = avslutning().avsluttetAvSaksbehandler
+            }
+        `when`(repository.findForUpdate(entity.id)).thenReturn(entity)
+
+        assertThrows<SaksdataConflictException> { service.delete(entity.id) }
+
+        verify(repository).findForUpdate(entity.id)
+        verify(repository, never()).delete(any(Saksdata::class.java))
+    }
+
+    @Test
+    fun `delete rejects missing saksdata without deleting it`() {
+        val missingId = UUID.randomUUID()
+        `when`(repository.findForUpdate(missingId)).thenReturn(null)
+
+        assertThrows<SaksdataNotFoundException> { service.delete(missingId) }
+
+        verify(repository).findForUpdate(missingId)
+        verify(repository, never()).delete(any(Saksdata::class.java))
+    }
+
     @ParameterizedTest
     @MethodSource("supportedTypesWithKvalitetsvurdering")
     fun `quality assessment update replaces the existing assessment`(sakstype: Type) {
@@ -483,14 +527,14 @@ class SaksdataServiceTest {
 
     private fun defaultKvalitetsvurdering(sakstype: Type): Kvalitetsvurdering =
         when (sakstype) {
-            Type.ANKE_ETTER_2027 -> AnkeKvalitetsvurderingV1()
-            Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> AnkeITRKvalitetsvurderingV1()
+            Type.ANKE_FOER_2027, Type.ANKE_ETTER_2027 -> AnkeKvalitetsvurderingV1()
+            Type.ANKE_I_TRYGDERETTEN_FOER_2027, Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> AnkeITRKvalitetsvurderingV1()
             else -> error("Unsupported type in test")
         }
 
     private fun nonDefaultKvalitetsvurdering(sakstype: Type): Kvalitetsvurdering =
         when (sakstype) {
-            Type.ANKE_ETTER_2027 -> {
+            Type.ANKE_FOER_2027, Type.ANKE_ETTER_2027 -> {
                 AnkeKvalitetsvurderingV1(
                     omgjortIKlageomgangen =
                         AnkeKvalitetsvurderingV1.OmgjortIKlageomgangen(
@@ -504,7 +548,7 @@ class SaksdataServiceTest {
                 )
             }
 
-            Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> {
+            Type.ANKE_I_TRYGDERETTEN_FOER_2027, Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> {
                 AnkeITRKvalitetsvurderingV1(
                     omgjortIAnkeomgangen =
                         AnkeITRKvalitetsvurderingV1.OmgjortIAnkeomgangen(
@@ -525,7 +569,7 @@ class SaksdataServiceTest {
 
     private fun invalidDraft(sakstype: Type): Kvalitetsvurdering =
         when (sakstype) {
-            Type.ANKE_ETTER_2027 -> {
+            Type.ANKE_FOER_2027, Type.ANKE_ETTER_2027 -> {
                 AnkeKvalitetsvurderingV1(
                     omgjortIKlageomgangen =
                         AnkeKvalitetsvurderingV1.OmgjortIKlageomgangen(
@@ -539,7 +583,7 @@ class SaksdataServiceTest {
                 )
             }
 
-            Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> {
+            Type.ANKE_I_TRYGDERETTEN_FOER_2027, Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> {
                 AnkeITRKvalitetsvurderingV1(
                     omgjortIAnkeomgangen =
                         AnkeITRKvalitetsvurderingV1.OmgjortIAnkeomgangen(
@@ -560,8 +604,8 @@ class SaksdataServiceTest {
 
     private fun otherSupportedType(sakstype: Type): Type =
         when (sakstype) {
-            Type.ANKE_ETTER_2027 -> Type.ANKE_I_TRYGDERETTEN_ETTER_2027
-            Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> Type.ANKE_ETTER_2027
+            Type.ANKE_FOER_2027, Type.ANKE_ETTER_2027 -> Type.ANKE_I_TRYGDERETTEN_ETTER_2027
+            Type.ANKE_I_TRYGDERETTEN_FOER_2027, Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> Type.ANKE_ETTER_2027
             else -> error("Unsupported type in test")
         }
 

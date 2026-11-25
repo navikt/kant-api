@@ -28,6 +28,12 @@ class SaksdataService(
 ) {
     fun get(id: UUID): SaksdataResponse = findSaksdataOrThrowError(id).toResponse()
 
+    @Transactional
+    fun delete(id: UUID) {
+        val entity = findForUpdate(id)
+        repository.delete(entity)
+    }
+
     fun getValidationErrors(id: UUID): KvalitetsvurderingValidationErrors {
         val entity = findSaksdataOrThrowError(id)
         return KvalitetsvurderingValidationErrors(
@@ -49,10 +55,16 @@ class SaksdataService(
     fun create(input: SaksdataRequest): SaksdataResponse {
         val kvalitetsvurdering =
             when (input.sakstype) {
-                Type.ANKE_ETTER_2027 -> AnkeKvalitetsvurderingV1()
-                Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> AnkeITRKvalitetsvurderingV1()
-                Type.BEGJAERING_OM_GJENOPPTAK_ETTER_2027 -> null
-                Type.BEGJAERING_OM_GJENOPPTAK_I_TRYGDERETTEN_ETTER_2027 -> null
+                Type.ANKE_FOER_2027, Type.ANKE_ETTER_2027 -> AnkeKvalitetsvurderingV1()
+
+                Type.ANKE_I_TRYGDERETTEN_FOER_2027, Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> AnkeITRKvalitetsvurderingV1()
+
+                Type.BEGJAERING_OM_GJENOPPTAK_FOER_2027,
+                Type.BEGJAERING_OM_GJENOPPTAK_ETTER_2027,
+                Type.BEGJAERING_OM_GJENOPPTAK_I_TRYGDERETTEN_FOER_2027,
+                Type.BEGJAERING_OM_GJENOPPTAK_I_TRYGDERETTEN_ETTER_2027,
+                -> null
+
                 else -> throw InvalidSakstypeException()
             }
         val existingEntity = findSaksdataByKabalReference(id = input.kabalReference)
@@ -91,8 +103,8 @@ class SaksdataService(
         val entity = findForUpdate(id)
         val matchesSakstype =
             when (entity.sakstype) {
-                Type.ANKE_ETTER_2027 -> request is AnkeKvalitetsvurderingV1
-                Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> request is AnkeITRKvalitetsvurderingV1
+                Type.ANKE_FOER_2027, Type.ANKE_ETTER_2027 -> request is AnkeKvalitetsvurderingV1
+                Type.ANKE_I_TRYGDERETTEN_FOER_2027, Type.ANKE_I_TRYGDERETTEN_ETTER_2027 -> request is AnkeITRKvalitetsvurderingV1
                 else -> false
             }
         if (!matchesSakstype) throw InvalidKvalitetsvurderingTypeException()
@@ -117,12 +129,24 @@ class SaksdataService(
             registreringshjemler = hjemmelSet,
         )
 
-        if (entity.sakstype in listOf(Type.ANKE_ETTER_2027, Type.BEGJAERING_OM_GJENOPPTAK_ETTER_2027)) {
+        if (entity.sakstype in
+            listOf(
+                Type.ANKE_FOER_2027,
+                Type.ANKE_ETTER_2027,
+                Type.BEGJAERING_OM_GJENOPPTAK_FOER_2027,
+                Type.BEGJAERING_OM_GJENOPPTAK_ETTER_2027,
+            )
+        ) {
             if (request.mottattKlageinstans == null) {
                 throw SaksdataInvalidException("Krever mottattKlageinstans for å fullføre sak")
             }
         } else if (entity.sakstype in
-            listOf(Type.ANKE_I_TRYGDERETTEN_ETTER_2027, Type.BEGJAERING_OM_GJENOPPTAK_I_TRYGDERETTEN_ETTER_2027)
+            listOf(
+                Type.ANKE_I_TRYGDERETTEN_FOER_2027,
+                Type.ANKE_I_TRYGDERETTEN_ETTER_2027,
+                Type.BEGJAERING_OM_GJENOPPTAK_I_TRYGDERETTEN_FOER_2027,
+                Type.BEGJAERING_OM_GJENOPPTAK_I_TRYGDERETTEN_ETTER_2027,
+            )
         ) {
             if (request.sakITrygderettenOpprettet == null) {
                 throw SaksdataInvalidException("Krever sakITrygderettenOpprettet for å fullføre anke")

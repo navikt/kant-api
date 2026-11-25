@@ -9,13 +9,16 @@ import no.nav.klage.kant.domain.saksdata.SaksdataRequest
 import no.nav.klage.kant.domain.saksdata.SaksdataResponse
 import no.nav.klage.kant.domain.saksdata.SaksdataUpdateRequest
 import no.nav.klage.kant.services.SaksdataService
+import org.springframework.http.HttpStatus
 import org.springframework.validation.annotation.Validated
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
@@ -29,6 +32,12 @@ class SaksdataController(
     fun get(
         @PathVariable id: UUID,
     ): SaksdataResponse = saksdataService.get(id)
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun delete(
+        @PathVariable id: UUID,
+    ) = saksdataService.delete(id)
 
     @PostMapping
     fun create(

@@ -10,12 +10,21 @@ object KvalitetsvurderingValidator {
         kvalitetsvurdering: Kvalitetsvurdering?,
         registreringshjemler: Set<Registreringshjemmel>,
     ) {
-        if (sakstype in listOf(Type.BEGJAERING_OM_GJENOPPTAK_ETTER_2027, Type.BEGJAERING_OM_GJENOPPTAK_I_TRYGDERETTEN_ETTER_2027)) return
+        if (sakstype in
+            listOf(
+                Type.BEGJAERING_OM_GJENOPPTAK_FOER_2027,
+                Type.BEGJAERING_OM_GJENOPPTAK_ETTER_2027,
+                Type.BEGJAERING_OM_GJENOPPTAK_I_TRYGDERETTEN_FOER_2027,
+                Type.BEGJAERING_OM_GJENOPPTAK_I_TRYGDERETTEN_ETTER_2027,
+            )
+        ) {
+            return
+        }
         val errors =
             buildList<KvalitetsvurderingValidationError> {
                 when (kvalitetsvurdering) {
                     is AnkeKvalitetsvurderingV1 -> {
-                        if (sakstype == Type.ANKE_ETTER_2027) {
+                        if (sakstype in listOf(Type.ANKE_FOER_2027, Type.ANKE_ETTER_2027)) {
                             validateAnke(assessment = kvalitetsvurdering, allowedHjemler = registreringshjemler)
                         } else {
                             add(typeMismatch())
@@ -23,7 +32,7 @@ object KvalitetsvurderingValidator {
                     }
 
                     is AnkeITRKvalitetsvurderingV1 -> {
-                        if (sakstype == Type.ANKE_I_TRYGDERETTEN_ETTER_2027) {
+                        if (sakstype in listOf(Type.ANKE_I_TRYGDERETTEN_FOER_2027, Type.ANKE_I_TRYGDERETTEN_ETTER_2027)) {
                             validateAnkeITR(assessment = kvalitetsvurdering, allowedHjemler = registreringshjemler)
                         } else {
                             add(typeMismatch())

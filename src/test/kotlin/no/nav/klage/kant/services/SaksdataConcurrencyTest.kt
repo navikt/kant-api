@@ -7,8 +7,10 @@ import no.nav.klage.kant.domain.saksdata.SaksdataAvslutningRequest
 import no.nav.klage.kant.domain.saksdata.SaksdataRequest
 import no.nav.klage.kodeverk.Type
 import no.nav.klage.kodeverk.Utfall
+import no.nav.klage.kodeverk.hjemmel.Registreringshjemmel
 import no.nav.klage.kodeverk.ytelse.Ytelse
 import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
@@ -92,6 +94,10 @@ class SaksdataConcurrencyTest
                                 Mutation.FINALIZATION -> {
                                     service.finalize(id = id, request = finalizationRequest())
                                 }
+
+                                Mutation.DELETE -> {
+                                    service.delete(id)
+                                }
                             }
                         }
                     }
@@ -112,6 +118,86 @@ class SaksdataConcurrencyTest
                 assessment.saksbehandlingsfeilIKlageomgangen shouldBe completedAssessment.saksbehandlingsfeilIKlageomgangen
             } finally {
                 releaseFinalization.countDown()
+                executor.shutdownNow()
+                executor.awaitTermination(5, SECONDS)
+            }
+        }
+
+        @Test
+        @Transactional(propagation = Propagation.NOT_SUPPORTED)
+        fun `committed deletion permanently removes saksdata and registreringshjemler`() {
+            val id = createOpenSaksdata()
+            jdbcTemplate.update(
+                "insert into registreringshjemmel (saksdata_id, id) values (?, ?)",
+                id,
+                Registreringshjemmel.FTRL_1_3.id,
+            )
+
+            service.delete(id)
+
+            jdbcTemplate.queryForObject(
+                "select count(*) from saksdata where id = ?",
+                Int::class.java,
+                id,
+            ) shouldBe 0
+            jdbcTemplate.queryForObject(
+                "select count(*) from registreringshjemmel where saksdata_id = ?",
+                Int::class.java,
+                id,
+            ) shouldBe 0
+            assertThrows<SaksdataNotFoundException> { service.get(id) }
+        }
+
+        @Test
+        @Transactional(propagation = Propagation.NOT_SUPPORTED)
+        fun `finalization queued behind deletion observes the missing saksdata`() {
+            val id = createOpenSaksdata()
+            val deletionWritten = CountDownLatch(1)
+            val releaseDeletion = CountDownLatch(1)
+            val finalizationAttempting = CountDownLatch(1)
+            val executor = Executors.newFixedThreadPool(2)
+            val transactionTemplate =
+                TransactionTemplate(transactionManager).apply {
+                    isolationLevel = TransactionDefinition.ISOLATION_READ_COMMITTED
+                }
+
+            try {
+                val deleter =
+                    executor.submit {
+                        transactionTemplate.executeWithoutResult {
+                            service.delete(id)
+                            deletionWritten.countDown()
+                            check(releaseDeletion.await(30, SECONDS)) {
+                                "Timed out waiting to release the deletion transaction"
+                            }
+                        }
+                    }
+                check(deletionWritten.await(10, SECONDS)) { "Deletion did not run before timeout" }
+
+                val finalizer =
+                    executor.submit {
+                        transactionTemplate.execute {
+                            jdbcTemplate.execute("SET LOCAL application_name = 'kant-saksdata-concurrency'")
+                            finalizationAttempting.countDown()
+                            service.finalize(id = id, request = finalizationRequest())
+                        }
+                    }
+                check(finalizationAttempting.await(5, SECONDS)) { "Finalization did not start before timeout" }
+                awaitDatabaseLockWait()
+
+                // Commit the delete only after PostgreSQL reports the finalizer is blocked on its row lock.
+                releaseDeletion.countDown()
+                deleter.get(30, SECONDS)
+                val missing = assertThrows<ExecutionException> { finalizer.get(10, SECONDS) }
+                assertInstanceOf(SaksdataNotFoundException::class.java, missing.cause)
+
+                jdbcTemplate.queryForObject(
+                    "select count(*) from saksdata where id = ?",
+                    Int::class.java,
+                    id,
+                ) shouldBe 0
+            } finally {
+                releaseDeletion.countDown()
                 executor.shutdownNow()
                 executor.awaitTermination(5, SECONDS)
             }
@@ -164,6 +250,7 @@ class SaksdataConcurrencyTest
         enum class Mutation {
             ASSESSMENT_UPDATE,
             FINALIZATION,
+            DELETE,
         }
 
         companion object {
