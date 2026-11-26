@@ -387,11 +387,11 @@ class SaksdataServiceTest {
     }
 
     @Test
-    fun `delete rejects missing saksdata without deleting it`() {
+    fun `delete on missing saksdata returns without deleting it`() {
         val missingId = UUID.randomUUID()
         `when`(repository.findForUpdate(missingId)).thenReturn(null)
 
-        assertThrows<SaksdataNotFoundException> { service.delete(missingId) }
+        service.delete(missingId)
 
         verify(repository).findForUpdate(missingId)
         verify(repository, never()).delete(any(Saksdata::class.java))

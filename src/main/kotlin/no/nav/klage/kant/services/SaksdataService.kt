@@ -15,6 +15,7 @@ import no.nav.klage.kant.domain.saksdata.SaksdataResponse
 import no.nav.klage.kant.domain.saksdata.SaksdataUpdateRequest
 import no.nav.klage.kant.domain.saksdata.toResponse
 import no.nav.klage.kant.repositories.SaksdataRepository
+import no.nav.klage.kant.util.getLogger
 import no.nav.klage.kodeverk.Type
 import no.nav.klage.kodeverk.hjemmel.Registreringshjemmel
 import org.springframework.stereotype.Service
@@ -26,12 +27,21 @@ import java.util.UUID
 class SaksdataService(
     private val repository: SaksdataRepository,
 ) {
+    companion object {
+        @Suppress("JAVA_CLASS_ON_COMPANION")
+        private val logger = getLogger(javaClass.enclosingClass)
+    }
+
     fun get(id: UUID): SaksdataResponse = findSaksdataOrThrowError(id).toResponse()
 
     @Transactional
     fun delete(id: UUID) {
-        val entity = findForUpdate(id)
-        repository.delete(entity)
+        try {
+            val entity = findForUpdate(id)
+            repository.delete(entity)
+        } catch (_: SaksdataNotFoundException) {
+            logger.debug("Saksdata not found, possibly already deleted for id {}. Returning.", id)
+        }
     }
 
     fun getValidationErrors(id: UUID): KvalitetsvurderingValidationErrors {

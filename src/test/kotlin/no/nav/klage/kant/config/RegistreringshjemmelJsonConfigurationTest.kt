@@ -112,14 +112,13 @@ class RegistreringshjemmelJsonConfigurationTest {
     }
 
     @Test
-    fun `delete returns not found for missing saksdata without deleting it`() {
+    fun `delete returns missing saksdata without deleting it`() {
         val missingId = UUID.randomUUID()
         `when`(saksdataRepository.findForUpdate(missingId)).thenReturn(null)
 
         mockMvc
             .perform(delete("/api/saksdata/$missingId"))
-            .andExpect(status().isNotFound)
-            .andExpect(jsonPath("$.detail").value("Saksdata not found"))
+            .andExpect(status().is2xxSuccessful)
 
         verify(saksdataRepository).findForUpdate(missingId)
         verify(saksdataRepository, never()).delete(any<Saksdata>())
