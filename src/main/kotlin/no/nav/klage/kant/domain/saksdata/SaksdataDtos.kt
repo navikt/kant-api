@@ -14,11 +14,12 @@ data class SaksdataRequest(
     val kabalReference: UUID,
     val sakstype: Type,
     val ytelse: Ytelse,
-    val trygderettenSaksnummer: String,
+    val trygderettenSaksnummer: String?,
 )
 
 data class SaksdataUpdateRequest(
     val registreringshjemmelIdSet: Set<String> = emptySet(),
+    val trygderettenSaksnummer: String? = null,
 )
 
 data class SaksdataAvslutningRequest(
@@ -27,6 +28,7 @@ data class SaksdataAvslutningRequest(
     val avsluttetAvSaksbehandler: LocalDateTime,
     val sakITrygderettenOpprettet: LocalDate? = null,
     val mottattKlageinstans: LocalDate? = null,
+    val trygderettenSaksnummer: String? = null,
     val tilknyttetEnhetId: String,
     val tilbakekreving: Boolean,
 )
@@ -44,7 +46,7 @@ data class SaksdataResponse(
     val registreringshjemler: Set<Registreringshjemmel>,
     val avsluttetAvSaksbehandler: LocalDateTime?,
     val kvalitetsvurdering: KvalitetsvurderingResponse? = null,
-    val trygderettenSaksnummer: String,
+    val trygderettenSaksnummer: String?,
 )
 
 fun Saksdata.toResponse(): SaksdataResponse =

@@ -1,3 +1,2 @@
--- Default value only necessary for dev
 ALTER TABLE saksdata
-    ADD COLUMN IF NOT EXISTS trygderetten_saksnummer TEXT DEFAULT '20261234';
+    ADD COLUMN IF NOT EXISTS trygderetten_saksnummer TEXT;

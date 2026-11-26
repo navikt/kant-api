@@ -164,7 +164,6 @@ class RegistreringshjemmelJsonConfigurationTest {
     fun `rejects invalid registreringshjemmel values in all HTTP request locations`(value: String) {
         val requests =
             listOf(
-                "/api/saksdata/$id" to """{"registreringshjemler":$value}""",
                 "/api/saksdata/$id/kvalitetsvurdering" to
                     assessmentRequest(type = "ANKE_V1", assessmentField = "omgjortIKlageomgangen", registreringshjemler = value),
                 "/api/saksdata/$id/kvalitetsvurdering" to

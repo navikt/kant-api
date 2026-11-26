@@ -102,6 +102,10 @@ class SaksdataService(
     ): SaksdataResponse {
         val entity = findForUpdate(id)
         entity.registreringshjemler = request.registreringshjemmelIdSet.map { Registreringshjemmel.of(it) }.toMutableSet()
+        if (request.trygderettenSaksnummer != null) {
+            entity.trygderettenSaksnummer = request.trygderettenSaksnummer
+        }
+
         return repository.saveAndFlush(entity).toResponse()
     }
 
@@ -163,6 +167,21 @@ class SaksdataService(
             }
         }
 
+        if (entity.sakstype in
+            listOf(
+                Type.ANKE_FOER_2027,
+                Type.BEGJAERING_OM_GJENOPPTAK_FOER_2027,
+            )
+        ) {
+            if (request.trygderettenSaksnummer != null) {
+                throw SaksdataInvalidException("Kan ikke sette saksnummer i Trygderetten for ${entity.sakstype.navn}")
+            }
+        } else {
+            if (request.trygderettenSaksnummer == null) {
+                throw SaksdataInvalidException("Krever saksnummer i Trygderetten for ${entity.sakstype.navn}")
+            }
+        }
+
         entity.utfall = request.utfall
         entity.registreringshjemler = hjemmelSet
         entity.avsluttetAvSaksbehandler = request.avsluttetAvSaksbehandler
@@ -170,6 +189,7 @@ class SaksdataService(
         entity.mottattKlageinstans = request.mottattKlageinstans
         entity.tilknyttetEnhetId = request.tilknyttetEnhetId
         entity.tilbakekreving = request.tilbakekreving
+        entity.trygderettenSaksnummer = request.trygderettenSaksnummer
         return repository.saveAndFlush(entity).toResponse()
     }
 
