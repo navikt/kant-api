@@ -84,7 +84,7 @@ class KvalitetsvurderingValidatorTest {
     }
 
     @Test
-    fun `validates selected and unselected selector homes against finalization homes`() {
+    fun `validates selected and unselected selector registreringshjemmel against finalization registreringshjemmel`() {
         supportedTypes.forEach { sakstype ->
             val expectedFields = selectorFields(sakstype)
             val errors =

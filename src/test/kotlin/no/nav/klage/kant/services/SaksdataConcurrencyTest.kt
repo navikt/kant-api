@@ -244,6 +244,7 @@ class SaksdataConcurrencyTest
                 avsluttetAvSaksbehandler = LocalDateTime.of(2026, 11, 16, 12, 0),
                 tilknyttetEnhetId = "4291",
                 tilbakekreving = false,
+                trygderettenSaksnummer = "54321",
                 mottattKlageinstans = LocalDate.of(2026, 10, 16),
             )
 

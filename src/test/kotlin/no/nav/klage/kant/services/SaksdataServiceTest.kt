@@ -295,7 +295,7 @@ class SaksdataServiceTest {
             val entity = saksdata()
             entity.kvalitetsvurdering = validAnkeAssessment()
             prepareUpdate(entity)
-            val request = avslutning().copy(sakITrygderettenOpprettet = opprettet)
+            val request = avslutning().copy(sakITrygderettenOpprettet = opprettet, trygderettenSaksnummer = "12345")
 
             val response = service.finalize(id = entity.id, request = request)
 
@@ -311,22 +311,22 @@ class SaksdataServiceTest {
     }
 
     @Test
-    fun `finalization accepts assessment homes present only in incoming request`() {
+    fun `finalization accepts assessment  present only in incoming request`() {
         val entity = saksdata()
-        entity.kvalitetsvurdering = ankeAssessmentWithSelectedHome()
+        entity.kvalitetsvurdering = ankeAssessmentWithSelectedRegistreringshjemmel()
         prepareUpdate(entity)
 
-        val response = service.finalize(id = entity.id, request = avslutning())
+        val response = service.finalize(id = entity.id, request = avslutning().copy(trygderettenSaksnummer = "123456"))
 
         response.registreringshjemler shouldBe setOf(Registreringshjemmel.FTRL_1_3)
         verify(repository).findForUpdate(entity.id)
     }
 
     @Test
-    fun `invalid finalization leaves entity unchanged when assessment home exists only in stored homes`() {
+    fun `invalid finalization leaves entity unchanged when assessment registreringshjemmel exists only in stored registreringshjemler`() {
         val entity =
             saksdata().apply {
-                kvalitetsvurdering = ankeAssessmentWithSelectedHome()
+                kvalitetsvurdering = ankeAssessmentWithSelectedRegistreringshjemmel()
                 registreringshjemler = setOf(Registreringshjemmel.FTRL_1_3)
             }
         prepareUpdate(entity)
@@ -494,7 +494,7 @@ class SaksdataServiceTest {
                 ),
         )
 
-    private fun ankeAssessmentWithSelectedHome(): AnkeKvalitetsvurderingV1 =
+    private fun ankeAssessmentWithSelectedRegistreringshjemmel(): AnkeKvalitetsvurderingV1 =
         AnkeKvalitetsvurderingV1(
             omgjortIKlageomgangen =
                 AnkeKvalitetsvurderingV1.OmgjortIKlageomgangen(
